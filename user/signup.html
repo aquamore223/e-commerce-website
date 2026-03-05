@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>signup-page</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header id="header"></header>
+    <div class="log-main">
+
+      <div class="log-main-img">
+        <img src="../images/dl.beatsnoop 1.jpg" alt="">
+      </div>
+
+      <div id="signup-form" class="log-main-form"  >
+        <form action="">
+          <h1>create an account</h1>
+          <h5>Enter your details below</h5>
+          <label for="name"></label>
+          <input type="text" placeholder="Name"> 
+          <label for="email or phone Number"></label>
+          <input type="text" placeholder="email or phone Number"> 
+          <label for="password"></label>
+          <input type="password" placeholder="password"> 
+          <button id="creatAccount" type="submit">Create Account</button>
+          <button id="googleSignup"> <img src="../images/google.png" alt="google image" >Sign up with Google</button>
+          <p>Already have account?<span id="show-signin">Sign In</span></p>
+        </form>
+      </div>
+
+
+
+      <div id="signin-form" class="log-main-form" style=" display : none ;">
+        <form action="">
+          <h1>Log in to Exclusive</h1>
+          <h5>Enter your details below</h5>
+          <label for="email or phone Number"></label>
+          <input type="text" placeholder="email or phone Number" required> 
+          <label for="password"></label>
+          <input type="password" placeholder="password" required> 
+           <div class="signup-flex">
+            <button type="submit">log in</button>
+             <a href="">Forget Password?</a>
+           </div>
+        </form>
+      </div>
+
+    </div>
+
+  <footer id="footer"></footer>
+  <script src="../js/index.js"></script>
+  <script src="user.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>

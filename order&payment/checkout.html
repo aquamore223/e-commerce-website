@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cart</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+     <header id="header">
+        loading....
+    </header>
+   <div class="chkout-main">
+      <div id="disp-hd" ><a href="">Home </a>  /<a href=""> Cart</a></div>
+        <div class="pg-flex-sb-ai">
+            <div class="str-flex">
+                <h2>Billing Details</h2>
+                <label for="First Name">First Name*</label>
+                <input type="text" required>
+                <label for="Company Name">Company Name</label>
+                <input type="text" required>
+                <label for="Street Address" >Street Address*</label>
+                <input type="text" required>
+                <label for="Street Address" >Apartment, floor, etc. (optional)</label>
+                <input type="text" required>
+                <label for="Town/City" >Town/City*</label>
+                <input type="text" required>
+                <label for="Phone Number" >Phone Number</label>
+                <input type="number" required>
+                <label for="Email Address" >Email Address*</label>
+                <input type="text" required>
+                
+
+
+                <div class="session-save">
+                    
+                    <input type="checkbox">
+                    <p> Save this information for faster check-out next time</p>
+                    
+                </div>
+            </div>
+            <div class="check-out-prev">
+                <div class="cart-flex" >
+                <div id="cart-pic-section">
+                    <img src="/images/g27cq4-500x500 1.png" alt=""> <p>LCD Monitor</p>
+                </div>
+                <p>$400</p>
+                </div>
+                <div class="cart-flex" >
+                    <div id="cart-pic-section">
+                        <img src="/images/g27cq4-500x500 1.png" alt=""> <p>LCD Monitor</p>
+                    </div>
+                    <p>$400</p>
+                </div>
+                <div class="undl-fl">
+                    <p>Subtotal:</p>
+                    <p>$1750</p>
+                </div>
+                <div class="undl-fl">
+                    <p>Shipping:</p>
+                    <p>Free</p>
+                </div>
+                <div class="pg-flex-sb">
+                    <p>Total:</p>
+                    <p>$1750</p>
+                </div>
+                <div>
+                    <input type="radio" name="payment-meth">
+                    <label for="bank">bank</label>
+                    <div>
+                        <img src="" alt="">
+                        <img src="" alt="">
+                    </div>
+                    <input type="radio" name="payment-meth">
+                    <label for="cash"> cash on delivery</label>
+                </div>
+                 <div class="pg-flex-sb" id="coup-contianer">                    
+                        <input type="text" placeholder="Coupon Code">
+                        <button class="colored-btn" >Apply Coupon</button>
+                    </div>
+                    <button class="colored-btn">place order</button>
+                    
+            </div>
+        </div>
+    </div>
+
+    <footer id="footer"></footer>
+  <script src="../js/index.js"></script>
+  <script src="cart-product.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>
