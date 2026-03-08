@@ -1665,3 +1665,152 @@ form p a {
         font-size: 12px;
     }
    }
+
+
+                    /*product-details-main*/
+
+ .product-details-main{
+    margin: 30px 150px;
+ }
+
+ .product-details-display{
+    display: grid;
+    grid-template-columns: 10% 50% 40%;
+ }
+ .product-img-wrapper {
+    background-color: hsl(15, 6%, 95%);
+    width:100px;
+    height:100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+ }
+ .product-img-wrapper img{
+    width:100;
+ }
+ .product-img-wrapper-cont{
+    display: flex;
+    flex-direction: column;
+    gap:10px;
+ }
+ .product-hero{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: hsl(15, 6%, 95%);
+ }
+
+ .img-scale{
+     transform:scalex(-1);
+ }
+
+ .prod-det{
+    margin:0  0 0 50px;
+ }
+
+ .prod-det-avialable{
+    color:var(--text-color);
+    margin: 0 10px;
+ }
+ #available{
+    color: lime;
+ }
+ .prod-det-text{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+ }
+ .prod-det-text h5{
+        font-size:25px;
+ }
+ .prod-det-text #prod-price{
+    font-size: 25px;
+ }
+
+ .size-check{
+    padding:5px;
+    background-color: white;
+    border-radius: 5px;
+    border: 1px solid grey;
+    width:2rem; 
+    text-align: center;
+    cursor: pointer;
+ }
+
+ .size-check:hover{
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+ }
+ .prod-size{
+    display: flex;
+    gap:10px;
+    align-items: center;
+ }
+
+ .prod-det-no{
+    display: flex;
+    justify-content: space-between;  
+ }
+ .prod-no{
+    display: flex;
+    border-radius: 5px;
+    overflow: hidden;
+ }
+  .prod-no input{
+    width:3rem;
+    text-align: center;
+    font-size: 14px;
+  }
+  .prod-no button{
+    width:40px;
+    font-size:20px;
+    background-color: white;
+    border:1px solid grey;
+  }
+  .prod-no button:hover{
+    background-color: var(--secondary-color);
+    color:white;
+  }
+
+  .prod-like{
+   border:1px solid grey;
+    border-radius: 5px;
+    width: 2rem;
+    height: 2rem;
+    padding: 2px;
+     
+  }
+
+  .prod-det-btns{
+    display: flex;
+    flex-direction: column;
+    gap:20px;
+    margin-top:20px;
+  }
+  .delivery{
+     border:1px solid grey;
+     border-radius: 5px;
+  }
+  .delivery-txt{
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    font-size: 14px;
+  }
+  .delivery-txt a {
+    color: #000000;
+  }
+  
+  .delivery-txt i{
+    font-size:30px;
+    color: #7a7777;
+    margin: 10px;
+  }
+
+  #delivery-txt1{
+    border-bottom: 1px solid grey;
+  }
+  #f-purch-btn{
+    width:170px;
+  }
