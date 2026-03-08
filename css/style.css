@@ -79,8 +79,12 @@ i {
     font-weight: bold;
     padding: 10px;
 }
-.nav ul li a:hover {
+.nav  a:hover {
     color: var(--secondary-color);
+}
+.nav a.active{
+  color: var(--secondary-color);
+  border-bottom: 2px solid var(--secondary-color);
 }
  .nav  .bx-menu{
     display: none;
@@ -1680,13 +1684,13 @@ form p a {
  .product-img-wrapper {
     background-color: hsl(15, 6%, 95%);
     width:100px;
-    height:100px;
+    height:120px;
     display: flex;
     align-items: center;
     justify-content: center;
  }
  .product-img-wrapper img{
-    width:100;
+    width:100%;
  }
  .product-img-wrapper-cont{
     display: flex;
@@ -1813,4 +1817,20 @@ form p a {
   }
   #f-purch-btn{
     width:170px;
+  }
+
+  @media (max-width:768px) {
+     .product-details-main{
+    margin: 10px 20px;
+     }
+
+    .product-details-display{
+    display: flex;
+    flex-wrap: wrap;
+    gap:20px;   
+    }
+    .product-img-wrapper-cont{
+        display: flex;
+        flex-direction: row;
+    }
   }

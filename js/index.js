@@ -3,11 +3,9 @@ function loadComponent(id, file) {
         .then(res => res.text())
         .then(data => {
             document.getElementById(id).innerHTML = data;
-            
-            // Initialize menu functionality after component is loaded
             initializeMenu();
+            setActiveNav();
             
-            // Initialize Lucide icons if they're being used
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
@@ -20,7 +18,6 @@ function initializeMenu() {
     const navLinks = document.getElementById("menu");
     
     if (menuIcon && navLinks) {
-        // Remove any existing event listeners to prevent duplicates
         menuIcon.replaceWith(menuIcon.cloneNode(true));
         const newMenuIcon = document.getElementById("menu-icon");
         
@@ -101,4 +98,35 @@ if (slides) {
     startAutoSlide();
     slides.addEventListener("mouseenter", stopAutoSlide);
     slides.addEventListener("mouseleave", startAutoSlide);
+}
+
+function setActiveNav() {
+    const navLinks = document.querySelectorAll(".nav a");
+    const currentPage = window.location.pathname.split("/").pop();
+
+    navLinks.forEach(link => {
+        const linkPage = link.getAttribute("href").split("/").pop();
+
+        if (linkPage === currentPage) {
+            link.classList.add("active");
+        }
+    });
+}
+
+const thumbs = document.querySelectorAll(".product-img-wrapper img");
+const hero = document.querySelector(".product-hero img");
+
+thumbs.forEach(img=>{
+ img.onclick = ()=>{
+   hero.src = img.src;
+ }
+})
+
+const minus = document.querySelector(".prod-no button:first-child");
+const plus = document.querySelector(".prod-no button:last-child");
+const input = document.querySelector(".prod-no input");
+
+plus.onclick = () => input.value++;
+minus.onclick = () => {
+ if(input.value > 1) input.value--;
 }
