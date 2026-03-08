@@ -37,17 +37,13 @@ function initializeMenu() {
 
 // Load components
 Promise.all([
-    loadComponent("header", "/header.html"),
-    loadComponent("footer", "/footer.html")
+    loadComponent("header", "./header.html"),    loadComponent("footer", "./footer.html")
 ]).then(() => {
     console.log("All components loaded");
 });
 
 // Also try to initialize after a short delay in case the DOM needs time
 setTimeout(initializeMenu, 500);
-
-loadComponent("header", "/header.html");
-loadComponent("footer", "/footer.html");
 
 // ---------------------- Slider ----------------------
 const slides = document.querySelector(".slider");
