@@ -1833,4 +1833,14 @@ form p a {
         display: flex;
         flex-direction: row;
     }
+
+    .wish-grid .scroll{
+       display: flex;
+       flex-wrap: wrap;
+        
+    }
+    .product-img-wrapper {
+        width:107px;
+        height:100px;
+    }
   }
