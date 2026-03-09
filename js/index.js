@@ -37,7 +37,8 @@ function initializeMenu() {
 
 // Load components
 Promise.all([
-    loadComponent("header", "./header.html"),    loadComponent("footer", "./footer.html")
+       loadComponent("header", "./header.html"), 
+       loadComponent("footer", "./footer.html")
 ]).then(() => {
     console.log("All components loaded");
 });
