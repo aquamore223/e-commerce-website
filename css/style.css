@@ -363,6 +363,10 @@ i {
 button:hover{
     background-color:lighter;
 }
+.scroll a{
+    text-decoration: none;
+    color: var(--text-color);
+}
  
 .scroll-tag{
     width:3rem;
@@ -398,8 +402,16 @@ button:hover{
     display: flex;
     align-items:center;
     justify-content: center;
-    margin:2px;
      
+     
+}
+.scroll-icon span:hover{
+    background-color: var(--secondary-color);
+    color: white;
+}
+.scroll-icon span:hover{
+    background-color: var(--secondary-color);
+    color: white;
 }
 
 .scroll-img-section button{
@@ -1672,175 +1684,302 @@ form p a {
 
 
                     /*product-details-main*/
+/* ======================== PRODUCT DETAILS PAGE ======================== */
 
- .product-details-main{
+.product-details-main {
     margin: 30px 150px;
- }
+}
 
- .product-details-display{
+/* ---------------------- DISPLAY GRID ---------------------- */
+.product-details-display {
     display: grid;
     grid-template-columns: 10% 50% 40%;
- }
- .product-img-wrapper {
+    margin-bottom: 90px;
+}
+
+/* ---------------------- THUMBNAILS ---------------------- */
+.product-img-wrapper {
     background-color: hsl(15, 6%, 95%);
-    width:100px;
-    height:120px;
+    width: 100px;
+    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
- }
- .product-img-wrapper img{
-    width:100%;
- }
- .product-img-wrapper-cont{
-    display: flex;
-    flex-direction: column;
-    gap:10px;
- }
- .product-hero{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: hsl(15, 6%, 95%);
- }
+    cursor: pointer; /* thumbnails are clickable */
+    border-radius: 5px;
+    overflow: hidden;
+}
 
- .img-scale{
-     transform:scalex(-1);
- }
+.product-img-wrapper img {
+    width: 100%;
+    object-fit: contain; /* keeps aspect ratio */
+}
 
- .prod-det{
-    margin:0  0 0 50px;
- }
-
- .prod-det-avialable{
-    color:var(--text-color);
-    margin: 0 10px;
- }
- #available{
-    color: lime;
- }
- .prod-det-text{
+/* container for thumbnails */
+/* ---------------------- THUMBNAILS FIX ---------------------- */
+.product-img-wrapper-cont {
     display: flex;
     flex-direction: column;
     gap: 10px;
- }
- .prod-det-text h5{
-        font-size:25px;
- }
- .prod-det-text #prod-price{
-    font-size: 25px;
- }
+    max-height: 400px;  /* match hero height */
+    overflow-y: auto;    /* scroll if too many thumbnails */
+    padding-right: 5px;  /* avoid scrollbar overlapping images */
+}
 
- .size-check{
-    padding:5px;
-    background-color: white;
-    border-radius: 5px;
-    border: 1px solid grey;
-    width:2rem; 
-    text-align: center;
-    cursor: pointer;
- }
+/* optional: nice scrollbar for webkit browsers */
+.product-img-wrapper-cont::-webkit-scrollbar {
+    width: 6px;
+}
 
- .size-check:hover{
-    background-color: var(--secondary-color);
-    color: white;
-    border: none;
- }
- .prod-size{
+.product-img-wrapper-cont::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+
+/* ---------------------- HERO IMAGE ---------------------- */
+.product-hero {
     display: flex;
-    gap:10px;
     align-items: center;
- }
+    justify-content: center;
+    background-color: hsl(15, 6%, 95%);
+    height: 400px;        
+    width: 100%;
+    overflow: hidden; 
+    border-radius: 5px;
+}
 
- .prod-det-no{
+.product-hero img {
+    max-height: 100%;     
+    max-width: 100%;     
+    object-fit: contain; 
+    transition: transform 0.3s ease;
+}
+
+ 
+.img-scale {
+    transform: scaleX(-1);
+}
+
+.prod-det {
+    margin: 0 0 0 50px;
+}
+
+.prod-det-text {
     display: flex;
-    justify-content: space-between;  
- }
- .prod-no{
+    flex-direction: column;
+    gap: 10px;
+}
+
+.prod-det-text h5 {
+    font-size: 25px;
+}
+
+.prod-det-text #prod-price {
+    font-size: 25px;
+}
+
+.prod-det-avialable {
+    color: var(--text-color);
+    margin: 0 10px;
+}
+
+#available {
+    color: lime;
+}
+
+.product-colors input {
+    display: none;
+}
+
+.product-colors {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.color {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.red { background: #d33; }
+.blue { background: #3b5bdb; }
+.black { background: #111; }
+
+.product-colors input:checked + .color {
+    outline: 2px solid black;
+    outline-offset: 2px;
+}
+
+ 
+.sizes input {
+    display: none;
+}
+
+.sizes {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.sizes label {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.sizes input:checked + label {
+    background: #e63946;
+    color: white;
+    border-color: #e63946;
+}
+
+ 
+.prod-det-no {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.prod-no {
     display: flex;
     border-radius: 5px;
     overflow: hidden;
- }
-  .prod-no input{
-    width:3rem;
+}
+
+.prod-no input {
+    width: 3rem;
     text-align: center;
     font-size: 14px;
-  }
-  .prod-no button{
-    width:40px;
-    font-size:20px;
-    background-color: white;
-    border:1px solid grey;
-  }
-  .prod-no button:hover{
-    background-color: var(--secondary-color);
-    color:white;
-  }
+}
 
-  .prod-like{
-   border:1px solid grey;
+.prod-no button {
+    width: 40px;
+    font-size: 20px;
+    background-color: white;
+    border: 1px solid grey;
+    cursor: pointer;
+}
+
+.prod-no button:hover {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.prod-like {
+    border: 1px solid grey;
     border-radius: 5px;
-    width: 2rem;
+    width: 3rem;
     height: 2rem;
     padding: 2px;
-     
-  }
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
 
-  .prod-det-btns{
+.prod-like:hover {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.prod-det-btns {
     display: flex;
     flex-direction: column;
-    gap:20px;
-    margin-top:20px;
-  }
-  .delivery{
-     border:1px solid grey;
-     border-radius: 5px;
-  }
-  .delivery-txt{
+    gap: 20px;
+    margin-top: 20px;
+}
+
+#f-purch-btn {
+    width: 170px;
+    cursor: pointer;
+}
+
+/* ---------------------- DELIVERY ---------------------- */
+.delivery {
+    border: 1px solid grey;
+    border-radius: 5px;
+}
+
+.delivery-txt {
     display: flex;
     align-items: center;
     padding: 10px;
     font-size: 14px;
-  }
-  .delivery-txt a {
+}
+
+.delivery-txt a {
     color: #000000;
-  }
-  
-  .delivery-txt i{
-    font-size:30px;
+}
+
+.delivery-txt i {
+    font-size: 30px;
     color: #7a7777;
     margin: 10px;
-  }
+}
 
-  #delivery-txt1{
+#delivery-txt1 {
     border-bottom: 1px solid grey;
-  }
-  #f-purch-btn{
-    width:170px;
-  }
+}
 
-  @media (max-width:768px) {
-     .product-details-main{
-    margin: 10px 20px;
-     }
-
-    .product-details-display{
+/* ---------------------- RELATED ITEMS ---------------------- */
+.wish-grid .scroll {
     display: flex;
-    flex-wrap: wrap;
-    gap:20px;   
-    }
-    .product-img-wrapper-cont{
-        display: flex;
-        flex-direction: row;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.scroll-img-section {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.scroll-img-section img {
+    width: 100%;
+    object-fit: cover;
+}
+
+/* ======================== RESPONSIVE ======================== */
+@media (max-width: 768px) {
+    .product-details-main {
+        margin: 10px 20px;
     }
 
-    .wish-grid .scroll{
-       display: flex;
-       flex-wrap: wrap;
-        
+    .product-details-display {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
     }
+
+    .product-img-wrapper-cont {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+        width:100%;
+    }
+
     .product-img-wrapper {
-        width:107px;
-        height:100px;
+        width: 80px;
+        height: 80px;
     }
-  }
+
+    .product-hero {
+        height: 250px;
+    }
+
+    .wish-grid .scroll {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}

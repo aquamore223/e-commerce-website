@@ -2,6 +2,7 @@
         {
             name:
             price:
+            description:
             discount:
             liked:
             seen:
