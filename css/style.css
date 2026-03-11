@@ -354,11 +354,10 @@ i {
     background-color: #f7f3f3af;
     padding: 30px;
     border-radius:5px;
+    transition: transform 0.25s ease;
 }
 .scroll-img-section:hover{
-    transform:scale(1.05);
-    
-
+    transform:scale(1.03);
 }
 button:hover{
     background-color:lighter;
@@ -463,20 +462,25 @@ button:hover{
     color:gray;
     text-decoration: line-through;
 }
-
-.rating .full {
-  fill: hsl(36, 100%, 60%);
-  stroke: #f7f3f3af;
-  width:15px;
-  height:15px;
+.rating{
+    display:flex;
+    align-items:center;
+    gap:3px;
 }
 
-.rating .empty{   
-     fill:  hsla(0, 3%, 77%, 0.829);
-    stroke: hsla(0, 20%, 96%, 0.686);
-     width:15px;
+.rating .full{
+    fill:hsl(36,100%,60%);
+    stroke:#f7f3f3af;
+    width:15px;
     height:15px;
-} 
+}
+
+.rating .empty{
+    fill:hsla(0,3%,77%,0.829);
+    stroke:hsla(0,20%,96%,0.686);
+    width:15px;
+    height:15px;
+}
 
 .scroller{
     display: flex;
@@ -842,6 +846,202 @@ button:hover{
 
 #foot{
     color: var(--text-color);
+}
+/* Quick View Modal */
+.quick-view-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 900px;
+    border-radius: 8px;
+    position: relative;
+    animation: slideUp 0.3s ease;
+}
+
+.close-modal {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.modal-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    padding: 30px;
+}
+
+.modal-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.modal-details h2 {
+    margin-bottom: 10px;
+}
+
+.modal-rating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.modal-price {
+    font-size: 24px;
+    color: #db4444;
+    margin-bottom: 15px;
+}
+
+.modal-price span {
+    font-size: 16px;
+    color: #999;
+    text-decoration: line-through;
+    margin-left: 10px;
+}
+
+.modal-description {
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.modal-colors, .modal-sizes {
+    margin-bottom: 20px;
+}
+
+.modal-colors p, .modal-sizes p {
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.color-options {
+    display: flex;
+    gap: 10px;
+}
+
+.color-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.color-dot:hover {
+    border-color: #db4444;
+}
+
+.size-option {
+    display: inline-block;
+    padding: 8px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.size-option:hover {
+    background: #db4444;
+    color: white;
+    border-color: #db4444;
+}
+
+.add-to-cart-modal {
+    background: #db4444;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+}
+
+.add-to-cart-modal:hover {
+    background: #c93333;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Cart count badge */
+.cart-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #db4444;
+    color: white;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 50%;
+}
+
+.cart-icon {
+    position: relative;
+}
+
+/* Active category tab */
+.category-tab.active {
+    background: #db4444;
+    color: white;
+}
+
+.category-tab.active i {
+    color: white;
+}
+
+/* Product hover effects */
+.scroll {
+    transition: transform 0.3s ease;
+}
+
+.scroll:hover {
+    transform: translateY(-5px);
+}
+
+.add-to-cart-btn {
+    display: none;
+    width: 100%;
+    background: #000;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.add-to-cart-btn:hover {
+    background: #db4444;
 }
 
 

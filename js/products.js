@@ -3,6 +3,10 @@ const products = {
     id: "1",
     name: "HAVIT HV-G92 Gamepad",
     price: "$120",
+    oldPrice: 160,
+    tag: "-45%",
+    flashSale: true,
+    bestSelling: true,
     description: "High quality gaming controller",
     img: "images/g92-2-500x500-1.png",
     images: [
@@ -12,11 +16,11 @@ const products = {
       "images/image 59.png",
     ],
     colors: [
-      {name: "Red", img: "images/g92-2-500x500-1.png"},
-      {name: "Black", img: "images/image 58.png"},
-      {name: "Blue", img: "images/image 61.png"}
+      { name: "Red", img: "images/g92-2-500x500-1.png" },
+      { name: "Black", img: "images/image 58.png" },
+      { name: "Blue", img: "images/image 61.png" }
     ],
-    sizes: ["S","M","L"],
+    sizes: ["S", "M", "L"],
     rating: 4,
     reviews: 150,
     stock: true
@@ -26,6 +30,10 @@ const products = {
     id: "2",
     name: "AK-900 Wired Keyboard",
     price: "$80",
+    oldPrice: 160,
+    tag: "new",
+    flashSale: true,
+    bestSelling: true,
     description: "Mechanical keyboard for gaming",
     img: "images/ak-900-01-500x500-1.png",
     images: [
@@ -34,10 +42,10 @@ const products = {
       "images/ak-900-03-500x500.png"
     ],
     colors: [
-      {name: "Black", img: "images/ak-900-01-500x500-1.png"},
-      {name: "White", img: "images/ak-900-02-500x500.png"}
+      { name: "Black", img: "images/ak-900-01-500x500-1.png" },
+      { name: "White", img: "images/ak-900-02-500x500.png" }
     ],
-    sizes: ["M","L"],
+    sizes: ["M", "L"],
     rating: 4,
     reviews: 80,
     stock: true
@@ -47,6 +55,10 @@ const products = {
     id: "3",
     name: "IPS LCD Gaming Monitor",
     price: "$250",
+    oldPrice: 160,
+    tag: "-45%",
+    flashSale: true,
+    bestSelling: false,
     description: "High refresh rate gaming monitor",
     img: "images/g27cq4-500x500 1.png",
     images: [
@@ -54,9 +66,9 @@ const products = {
       "images/g27cq4-500x500 2.png"
     ],
     colors: [
-      {name: "Black", img: "images/g27cq4-500x500 1.png"}
+      { name: "Black", img: "images/g27cq4-500x500 1.png" }
     ],
-    sizes: ["M","L","XL"],
+    sizes: ["M", "L", "XL"],
     rating: 5,
     reviews: 200,
     stock: true
@@ -66,6 +78,7 @@ const products = {
     id: "4",
     name: "IPS LCD Gaming Monitor Pro",
     price: "$300",
+    bestSelling: true,
     description: "Professional high refresh rate monitor",
     img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 1.png",
     images: [
@@ -73,9 +86,9 @@ const products = {
       "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 2.png"
     ],
     colors: [
-      {name: "Black", img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 1.png"}
+      { name: "Black", img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 1.png" }
     ],
-    sizes: ["M","L"],
+    sizes: ["M", "L"],
     rating: 4,
     reviews: 50,
     stock: true
@@ -85,6 +98,7 @@ const products = {
     id: "5",
     name: "S-Series Comfort Chair",
     price: "$120",
+    bestSelling: true,
     description: "Ergonomic gaming chair with comfort support",
     img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 1.png",
     images: [
@@ -92,10 +106,10 @@ const products = {
       "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 2.png"
     ],
     colors: [
-      {name: "Red", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 1.png"},
-      {name: "Black", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 2.png"}
+      { name: "Red", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 1.png" },
+      { name: "Black", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 2.png" }
     ],
-    sizes: ["M","L","XL"],
+    sizes: ["M", "L", "XL"],
     rating: 4,
     reviews: 70,
     stock: true
