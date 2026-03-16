@@ -12,7 +12,6 @@ this.loadCategories()
 })
 
 }
-
 /* GET PRODUCTS ARRAY */
 
 getProducts(){
@@ -111,21 +110,21 @@ this.renderIcons()
 
 productCard(product){
 
-const oldPrice = product.oldPrice ? `$${product.oldPrice}` : ""
+const oldPrice = product.oldPrice ? `$${product.oldPrice}` : "";
 
 const tag = product.tag
 ? `<span class="scroll-tag">${product.tag}</span>`
-: ""
+: "";
 
 return `
 
 <div class="scroll" data-product-id="${product.id}">
 
-<a href="product-details.html?id=${product.id}">
-
 <div class="scroll-img-section">
 
+<a href="product-details.html?id=${product.id}">
 <img src="${product.img}" alt="${product.name}">
+</a>
 
 ${tag}
 
@@ -147,24 +146,20 @@ Add To Cart
 
 </div>
 
+<a href="product-details.html?id=${product.id}">
+
 <div class="scroll-text">
 
 <h5>${product.name}</h5>
 
 <p class="price">
-
 ${product.price}
-
 <span>${oldPrice}</span>
-
 </p>
 
 <div class="rating">
-
 ${this.stars(product.rating)}
-
 <span>(${product.reviews})</span>
-
 </div>
 
 </div>
@@ -173,9 +168,10 @@ ${this.stars(product.rating)}
 
 </div>
 
-`
-
+`;
 }
+
+
 
 /* ---------------- STAR RATING ---------------- */
 
@@ -200,6 +196,7 @@ starHTML += `<i data-lucide="star" class="empty"></i>`
 return starHTML
 
 }
+                    
 
 /* ---------------- ICON RENDER ---------------- */
 

@@ -847,6 +847,12 @@ button:hover{
 #foot{
     color: var(--text-color);
 }
+
+.add-to-cart-btn.added{
+background: green;
+color: white;
+}
+
 /* Quick View Modal */
 .quick-view-modal {
     position: fixed;

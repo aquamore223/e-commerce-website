@@ -11,14 +11,14 @@ const products = {
     img: "images/g92-2-500x500-1.png",
     images: [
       "images/g92-2-500x500-1.png",
-      "images/image 58.png",
-      "images/image 61.png",
-      "images/image 59.png",
+      "images/image%2058.png",
+      "images/image%2061.png",
+      "images/image%2059.png",
     ],
     colors: [
       { name: "Red", img: "images/g92-2-500x500-1.png" },
-      { name: "Black", img: "images/image 58.png" },
-      { name: "Blue", img: "images/image 61.png" }
+      { name: "Black", img: "images/image%2058.png" },
+      { name: "Blue", img: "images/image%2061.png" }
     ],
     sizes: ["S", "M", "L"],
     rating: 4,
@@ -60,13 +60,13 @@ const products = {
     flashSale: true,
     bestSelling: false,
     description: "High refresh rate gaming monitor",
-    img: "images/g27cq4-500x500 1.png",
+    img: "images/g27cq4-500x500%201.png",
     images: [
-      "images/g27cq4-500x500 1.png",
-      "images/g27cq4-500x500 2.png"
+      "images/g27cq4-500x500%201.png",
+      "images/g27cq4-500x500%202.png"
     ],
     colors: [
-      { name: "Black", img: "images/g27cq4-500x500 1.png" }
+      { name: "Black", img: "images/g27cq4-500x500%201.png" }
     ],
     sizes: ["M", "L", "XL"],
     rating: 5,
@@ -80,13 +80,13 @@ const products = {
     price: "$300",
     bestSelling: true,
     description: "Professional high refresh rate monitor",
-    img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 1.png",
+    img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash%201.png",
     images: [
-      "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 1.png",
-      "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 2.png"
+      "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash%201.png",
+      "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash%202.png"
     ],
     colors: [
-      { name: "Black", img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash 1.png" }
+      { name: "Black", img: "images/sam-moghadam-khamseh-L_7MQsHl_aU-unsplash%201.png" }
     ],
     sizes: ["M", "L"],
     rating: 4,
@@ -100,14 +100,14 @@ const products = {
     price: "$120",
     bestSelling: true,
     description: "Ergonomic gaming chair with comfort support",
-    img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 1.png",
+    img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash%201.png",
     images: [
       "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 1.png",
       "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 2.png"
     ],
     colors: [
-      { name: "Red", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 1.png" },
-      { name: "Black", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash 2.png" }
+      { name: "Red", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash%201.png" },
+      { name: "Black", img: "images/sam-moghadam-khamseh-kvmdsTrGOBM-unsplash%202.png" }
     ],
     sizes: ["M", "L", "XL"],
     rating: 4,

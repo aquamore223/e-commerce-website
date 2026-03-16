@@ -7,12 +7,16 @@ const productId = params.get("id");
 const productList = Object.values(products);
 
 // Find the current product
-const product = productList.find(p => p.id === productId);
+const product = productList.find(p => p.id == productId);
 
 if (!product) {
     console.error("Product not found!");
 } else {
-    // ------------------ Breadcrumb ------------------
+
+            const addBtn = document.querySelector(".add-to-cart-btn");
+        if(addBtn){
+            addBtn.dataset.id = productId;
+        }
     const breadcrumb = document.getElementById("disp-hd");
     if (breadcrumb) {
         breadcrumb.innerHTML = `<a href="index.html">Home</a> / <a href="#">Gaming</a> / <span>${product.name}</span>`;
@@ -137,7 +141,9 @@ if (!product) {
                         <span class="heart-tag"><i data-lucide="heart" width="15" height="15"></i></span>
                         <span class="eye-tag"><i data-lucide="eye" width="15" height="15"></i></span>
                     </div>
-                    <button onclick="window.location.href='product-details.html?id=${p.id}'">Add to Cart</button>
+                    <button class="add-to-cart-btn" data-id="${p.id}">
+Add To Cart
+</button>
                 </div>
                 <div class="scroll-text">
                     <h5>${p.name}</h5>
