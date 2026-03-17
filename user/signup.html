@@ -23,11 +23,11 @@
           <h1>create an account</h1>
           <h5>Enter your details below</h5>
           <label for="name"></label>
-          <input type="text" placeholder="Name"> 
+          <input type="text" placeholder="Name" autocomplete="name"> 
           <label for="email or phone Number"></label>
-          <input type="text" placeholder="email or phone Number"> 
+          <input type="text" placeholder="email or phone Number" autocomplete="number"> 
           <label for="password"></label>
-          <input type="password" placeholder="password"> 
+          <input type="password" placeholder="password" autocomplete="password"> 
           <button id="creatAccount" type="submit">Create Account</button>
           <button id="googleSignup"> <img src="../images/google.png" alt="google image" >Sign up with Google</button>
           <p>Already have account?<span id="show-signin">Sign In</span></p>
@@ -43,7 +43,7 @@
           <label for="email or phone Number"></label>
           <input type="text" placeholder="email or phone Number" required> 
           <label for="password"></label>
-          <input type="password" placeholder="password" required> 
+          <input type="password" placeholder="password" autocomplete="password" required> 
            <div class="signup-flex">
             <button type="submit">log in</button>
              <a href="">Forget Password?</a>
@@ -54,6 +54,7 @@
     </div>
 
   <footer id="footer"></footer>
+  <script src="/js/utils.js"></script>
   <script src="../js/cart.js"></script>
   <script src="../js/index.js"></script>
   <script src="user.js"></script>

@@ -1,4 +1,3 @@
-// ---------------------- COMPONENT LOADER ----------------------
 
 function getBasePath() {
     const path = window.location.pathname;
@@ -127,40 +126,6 @@ if (slider) {
 }
 
 
-// ---------------------- PRODUCT IMAGE SWITCH ----------------------
-
-const thumbs = document.querySelectorAll(".product-img-wrapper img");
-const hero = document.querySelector(".product-hero img");
-
-if (thumbs.length && hero) {
-    thumbs.forEach(img => {
-        img.onclick = () => {
-            hero.src = img.src;
-        };
-    });
-}
-
-
-// ---------------------- PRODUCT QUANTITY ----------------------
-
-const minus = document.querySelector(".prod-no button:first-child");
-const plus = document.querySelector(".prod-no button:last-child");
-const input = document.querySelector(".prod-no input");
-
-if (plus && minus && input) {
-
-    plus.onclick = () => {
-        input.value = Number(input.value) + 1;
-    };
-
-    minus.onclick = () => {
-        if (input.value > 1) {
-            input.value = Number(input.value) - 1;
-        }
-    };
-}
-
-
 
 const daysEl = document.getElementById("days");
 const hoursEl = document.getElementById("hours");
@@ -192,3 +157,41 @@ if (daysEl && hoursEl && minutesEl && secondsEl) {
 
     }, 1000);
 }
+
+function hero2Countdown(){
+
+const daysEl = document.getElementById("hdays")
+const hoursEl = document.getElementById("hhours")
+const minutesEl = document.getElementById("hminutes")
+const secondsEl = document.getElementById("hseconds")
+
+if(!daysEl) return
+
+let totalSeconds =
+(Number(daysEl.textContent) * 86400) +
+(Number(hoursEl.textContent) * 3600) +
+(Number(minutesEl.textContent) * 60) +
+Number(secondsEl.textContent)
+
+setInterval(()=>{
+
+if(totalSeconds <= 0) return
+
+totalSeconds--
+
+const days = Math.floor(totalSeconds / 86400)
+const hours = Math.floor((totalSeconds % 86400) / 3600)
+const minutes = Math.floor((totalSeconds % 3600) / 60)
+const seconds = totalSeconds % 60
+
+daysEl.textContent = String(days).padStart(2,"0")
+hoursEl.textContent = String(hours).padStart(2,"0")
+minutesEl.textContent = String(minutes).padStart(2,"0")
+secondsEl.textContent = String(seconds).padStart(2,"0")
+
+},1000)
+
+}
+
+hero2Countdown()
+

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Page</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+  <header id="header">loading...</header>
+
+  <main class="admin-main">
+    <h2>Product Management</h2>
+    
+    <!-- Add / Edit Product Form -->
+    <div class="admin-form">
+      <input type="hidden" id="product-id">
+      <input type="text" id="product-name" placeholder="Product Name" required>
+      <input type="number" id="product-price" placeholder="Price" required>
+      <input type="number" id="product-oldprice" placeholder="Old Price">
+      <input type="text" id="product-category" placeholder="Category (e.g., tops, jeans)" required>
+      <input type="text" id="product-img" placeholder="Image URL" required>
+      <input type="text" id="product-tag" placeholder="Tag (e.g., -20%)">
+      <input type="number" id="product-rating" placeholder="Rating (1-5)">
+      <button id="save-product-btn" class="colored-btn">Add Product</button>
+      <button id="cancel-edit-btn" class="shadow-btn">Cancel</button>
+    </div>
+
+    <!-- Products Table -->
+    <div class="admin-products">
+      <h3>All Products</h3>
+      <div id="product-list"></div>
+    </div>
+  </main>
+
+  <footer id="footer">loading...</footer>
+
+  <script src="/js/utils.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/index.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

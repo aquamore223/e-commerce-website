@@ -110,7 +110,7 @@ this.renderIcons()
 
 productCard(product){
 
-const oldPrice = product.oldPrice ? `$${product.oldPrice}` : "";
+const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";
 
 const tag = product.tag
 ? `<span class="scroll-tag">${product.tag}</span>`
@@ -130,13 +130,13 @@ ${tag}
 
 <div class="scroll-icon">
 
-<span class="heart-tag">
-<i data-lucide="heart"></i>
-</span>
+  <span class="heart-icon" data-id="${product.id}">
+    <i data-lucide="heart" class="${wishlistSystem.isWishlisted(product.id) ? 'filled' : ''}"></i>
+  </span>
 
-<span class="eye-tag">
-<i data-lucide="eye"></i>
-</span>
+  <span class="eye-icon" data-id="${product.id}">
+    <i data-lucide="eye" class="${viewedSystem.isViewed(product.id) ? 'viewed' : ''}"></i>
+  </span>
 
 </div>
 
@@ -153,7 +153,7 @@ Add To Cart
 <h5>${product.name}</h5>
 
 <p class="price">
-${product.price}
+${formatPrice(product.price)}
 <span>${oldPrice}</span>
 </p>
 
@@ -205,8 +205,30 @@ renderIcons(){
 if(window.lucide){
 lucide.createIcons()
 }
+document.addEventListener("click", e => {
+  // Heart / wishlist toggle
+  const heart = e.target.closest(".heart-icon, .heart-icon i");
+  if (heart) {
+    const id = heart.dataset.id;
+    wishlistSystem.toggle(id);
+    // Toggle class for visual
+    const icon = heart.querySelector("i");
+    if(icon) icon.classList.toggle("filled", wishlistSystem.isWishlisted(id));
+  }
+
+  // Eye / recently viewed
+  const eye = e.target.closest(".eye-icon, .eye-icon i");
+  if (eye) {
+    const id = eye.dataset.id;
+    viewedSystem.markViewed(id);
+    // Add class for visual
+    const icon = eye.querySelector("i");
+    if(icon) icon.classList.add("viewed");
+  }
+});
 
 }
+
 
 }
 

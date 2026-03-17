@@ -49,7 +49,7 @@ if (!product) {
     const prodPrice = document.getElementById("prod-price");
     const prodDesc = document.querySelector(".prod-det-text p:last-child");
     if (prodName) prodName.textContent = product.name;
-    if (prodPrice) prodPrice.textContent = product.price;
+    if (prodPrice) prodPrice.textContent = formatPrice(product.price);
     if (prodDesc) prodDesc.textContent = product.description;
 
     // ------------------ Rating ------------------
@@ -104,6 +104,46 @@ if (!product) {
         });
     }
 
+                        // wish btn //
+                                                                                        const mainHeart = document.querySelector(".heart-icon");
+                if (mainHeart) {
+                    mainHeart.dataset.id = productId;
+        }
+    // ---------------------- PRODUCT IMAGE SWITCH ----------------------
+
+const thumbs = document.querySelectorAll(".product-img-wrapper img");
+const hero = document.querySelector(".product-hero img");
+
+if (thumbs.length && hero) {
+    thumbs.forEach(img => {
+        img.onclick = () => {
+            hero.src = img.src;
+        };
+    });
+}
+
+
+// ---------------------- PRODUCT QUANTITY ----------------------
+
+const minus = document.querySelector(".prod-no button:first-child");
+const plus = document.querySelector(".prod-no button:last-child");
+const input = document.querySelector(".prod-no input");
+
+if (plus && minus && input) {
+
+    plus.onclick = () => {
+        input.value = Number(input.value) + 1;
+    };
+
+    minus.onclick = () => {
+        if (input.value > 1) {
+            input.value = Number(input.value) - 1;
+        }
+    };
+}
+
+
+
     // ------------------ Sizes ------------------
     const sizesContainer = document.querySelector(".sizes");
     if (sizesContainer && product.sizes) {
@@ -133,26 +173,77 @@ if (!product) {
         productList.filter(p => p.id !== productId).slice(0, 4).forEach(p => {
             const div = document.createElement("div");
             div.classList.add("scroll");
-            div.innerHTML = `
-                <div class="scroll-img-section">
-                    <img src="${p.img}" alt="${p.name}">
-                    <span class="scroll-tag">-45%</span>
-                    <div class="scroll-icon">
-                        <span class="heart-tag"><i data-lucide="heart" width="15" height="15"></i></span>
-                        <span class="eye-tag"><i data-lucide="eye" width="15" height="15"></i></span>
-                    </div>
-                    <button class="add-to-cart-btn" data-id="${p.id}">
-Add To Cart
-</button>
-                </div>
-                <div class="scroll-text">
-                    <h5>${p.name}</h5>
-                    <p>${p.price} <span>$${parseInt(p.price.replace('$','')) + 40}</span></p>
-                    <p class="rating">
-                        ${[...Array(5)].map((_,i) => `<i data-lucide="star" class="${i < (p.rating||4)?'full':'empty'}"></i>`).join('')}
-                    </p>
-                </div>
-            `;
+           div.innerHTML = `
+    <a href="product-details.html?id=${p.id}">
+        <div class="scroll-img-section">
+            <img src="${p.img}" alt="${p.name}">
+            <span class="scroll-tag">-45%</span>
+            <div class="scroll-icon">
+                <span class="heart-icon" data-id="${p.id}">
+                    <i data-lucide="heart" width="15" height="15"></i>
+                </span>
+                <span class="eye-icon" data-id="${p.id}">
+                    <i data-lucide="eye" width="15" height="15"></i>
+                </span>
+            </div>
+            <button class="add-to-cart-btn" data-id="${p.id}">
+                Add To Cart
+            </button>
+        </div>
+    </a>
+
+    <div class="scroll-text">
+        <h5>${p.name}</h5>
+                <p>
+        ${formatPrice(p.price)} 
+        <span>${formatPrice(parseInt(p.price.replace('$','')) + 40)}</span>
+        </p>
+        <p class="rating">
+            ${[...Array(5)].map((_,i) => `<i data-lucide="star" class="${i < (p.rating||4)?'full':'empty'}"></i>`).join('')}
+        </p>
+    </div>
+
+`;
+
+    document.addEventListener("click", e => {
+
+  
+        const heart = e.target.closest(".heart-icon");
+        if (heart) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = String(heart.dataset.id);
+
+            wishlistSystem.toggle(id);
+
+            const icon = heart.querySelector("i");
+            if (icon) {
+            icon.classList.toggle("filled", wishlistSystem.isWishlisted(id));
+            }
+
+            return;
+        }
+
+  
+        const eye = e.target.closest(".eye-icon");
+        if (eye) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = String(eye.dataset.id);
+
+            viewedSystem.markViewed(id);
+
+            const icon = eye.querySelector("i");
+            if (icon) {
+            icon.classList.add("viewed");
+            }
+
+            return;
+        }
+
+    });
             relatedContainer.appendChild(div);
         });
     }
