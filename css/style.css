@@ -114,7 +114,31 @@ i {
 .search:hover {
     background-color: rgb(247, 241, 241);
 }
-
+.user-icon ul{
+    display: none;
+    flex-direction: column;
+    position:absolute;
+    background: rgba(58, 57, 57, 0.7); 
+    backdrop-filter: blur(15px);
+    border-radius: 10px;
+    z-index:1000;
+    padding: 20px 10px 10px 20px;
+    right: 150px;
+    gap:2px;
+}
+.user-icon ul.active {
+  display: flex;
+}
+.user-icon ul li a{
+    display: flex;
+    align-items: center;
+    color: white;
+    gap:15px;
+    padding:5px;
+}
+.user-icon ul li:hover{
+    color: var(--secondary-color);
+}
 .nav a {
     color: var(--text-color);
     padding: 5px;
@@ -392,7 +416,8 @@ button:hover{
     top:0;
     right:0;
     flex-direction: column; 
-    margin:4px;
+    margin:10px 4px;
+    gap:3px;
 }
 .scroll-icon span{
     background-color: white;
@@ -400,9 +425,12 @@ button:hover{
     padding:5px;
     display: flex;
     align-items:center;
-    justify-content: center;
-     
-     
+    justify-content: center;  
+}
+.scroll-icon span svg{
+    stroke-width:1px;
+    width:20px;
+    height:20px;
 }
 .scroll-icon span:hover{
     background-color: var(--secondary-color);
@@ -2225,4 +2253,28 @@ form p a {
         display: flex;
         flex-wrap: wrap;
     }
+}
+
+.admin-main{
+    padding: 30px 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+.admin-form{
+    display: flex;
+    flex-direction: column;
+    max-width:800px;
+    gap:10px;
+}
+
+.admin-form input{
+    font-size:20px;
+    background-color: hsl(0, 0%, 95%);
+    border: none;
+    box-shadow: 1px 1px 1px grey;
+}
+.dsp-flx{
+    display: flex;
+    justify-content: space-between;
 }

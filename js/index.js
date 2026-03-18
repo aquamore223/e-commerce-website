@@ -52,6 +52,13 @@ function initializeMenu() {
         navLinks.classList.toggle("active");
         menuIcon.classList.toggle("bx-x");
     };
+    const userIcon = document.querySelector('.user-icon');
+const dropdown = userIcon.querySelector('ul');
+
+userIcon.addEventListener('click', () => {
+  dropdown.classList.toggle('active');
+});
+
 }
 
 
