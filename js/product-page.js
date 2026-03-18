@@ -205,6 +205,13 @@ if (plus && minus && input) {
 
 `;
 
+const params = new URLSearchParams(window.location.search);
+const productId = params.get("id");
+
+if (productId) {
+  viewedSystem.markViewed(productId);
+}
+
     document.addEventListener("click", e => {
 
   

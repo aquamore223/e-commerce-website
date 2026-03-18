@@ -49,7 +49,7 @@ class CartPage {
                 <span>${item.name}</span>
                 <button class="remove-item">🗑</button>
             </div>
-           <p class="subtotal">${formatPrice(subtotal)}</p>
+           <p class="subtotal">${formatPrice(item.price)}</p>
             <input type="number" class="qty-input" value="${item.qty}" min="1">
             <p class="subtotal"><p>${formatPrice(subtotal)}</p></p>
         </div>

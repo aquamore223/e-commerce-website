@@ -36,6 +36,7 @@ Promise.all([
 ]).then(() => {
     initializeMenu();
     setActiveNav();
+    initiUser();
 });
 
 
@@ -52,19 +53,26 @@ function initializeMenu() {
         navLinks.classList.toggle("active");
         menuIcon.classList.toggle("bx-x");
     };
+  
+}
 
-    const userIcon = document.querySelector('.user-icon');
-const dropdown = userIcon.querySelector('ul');
+function initiUser() {
+  const userIcon = document.querySelector('.user-icon');
+  if (!userIcon) return;
 
-userIcon.addEventListener('click', () => {
-  dropdown.classList.toggle('active');
-});
-document.addEventListener('click', (e) => {
-  if (!userIcon.contains(e.target)) {
-    dropdown.classList.remove('active');
-  }
-});
+  const dropdown = userIcon.querySelector('ul');
+  if (!dropdown) return;
 
+  userIcon.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('active');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!userIcon.contains(e.target)) {
+      dropdown.classList.remove('active');
+    }
+  });
 }
 
 

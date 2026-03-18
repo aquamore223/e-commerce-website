@@ -21,7 +21,7 @@ const products = {
       { name: "Blue", img: "/images/image%2061.png" }
     ],
     sizes: ["S", "M", "L"],
-    rating: 4,
+    rating: 2,
     reviews: 150,
     stock: true
   },

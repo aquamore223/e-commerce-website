@@ -205,27 +205,6 @@ renderIcons(){
 if(window.lucide){
 lucide.createIcons()
 }
-document.addEventListener("click", e => {
-  // Heart / wishlist toggle
-  const heart = e.target.closest(".heart-icon, .heart-icon i");
-  if (heart) {
-    const id = heart.dataset.id;
-    wishlistSystem.toggle(id);
-    // Toggle class for visual
-    const icon = heart.querySelector("i");
-    if(icon) icon.classList.toggle("filled", wishlistSystem.isWishlisted(id));
-  }
-
-  // Eye / recently viewed
-  const eye = e.target.closest(".eye-icon, .eye-icon i");
-  if (eye) {
-    const id = eye.dataset.id;
-    viewedSystem.markViewed(id);
-    // Add class for visual
-    const icon = eye.querySelector("i");
-    if(icon) icon.classList.add("viewed");
-  }
-});
 
 }
 

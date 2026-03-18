@@ -114,8 +114,11 @@ i {
 .search:hover {
     background-color: rgb(247, 241, 241);
 }
+.user-icon svg:hover{
+   color: var(--secondary-color);
+}
 .user-icon ul{
-    display: none;
+    display: none !important;
     flex-direction: column;
     position:absolute;
     background: rgba(58, 57, 57, 0.7); 
@@ -127,7 +130,7 @@ i {
     gap:2px;
 }
 .user-icon ul.active {
-  display: flex;
+  display: flex !important;
 }
 .user-icon ul li a{
     display: flex;
@@ -156,9 +159,7 @@ i {
     display: flex;
     padding: 30px 150px ;
     margin: 0;
-    width: 100%;
-    
-    
+    width: 100%; 
 }
 
 .hero-section li {
