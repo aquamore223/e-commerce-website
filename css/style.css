@@ -1031,7 +1031,7 @@ color: white;
 /* Cart count badge */
 .cart-count {
     position: absolute;
-    top: -8px;
+    top: -12px;
     right: -8px;
     background: #db4444;
     color: white;
