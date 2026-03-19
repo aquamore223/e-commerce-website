@@ -71,41 +71,36 @@ this.renderIcons()
 }
 
 /* ---------------- CATEGORIES ---------------- */
-
 loadCategories(){
 
 const container = document.querySelector(".category-tabs")
-
 if(!container) return
 
 const categories = [
-
-{ name:"Phones", icon:"smartphone"},
-{ name:"Computers", icon:"monitor"},
-{ name:"SmartWatch", icon:"watch"},
-{ name:"Headphones", icon:"headphones"},
-{ name:"Gaming", icon:"gamepad-2"},
-{ name:"Cameras", icon:"camera"},
-{ name:"Fashion", icon:"shirt"}
-
+  { name:"Phones", icon:"smartphone"},
+  { name:"Computers", icon:"monitor"},
+  { name:"SmartWatch", icon:"watch"},
+  { name:"Headphones", icon:"headphones"},
+  { name:"Gaming", icon:"gamepad-2"},
+  { name:"Cameras", icon:"camera"},
+  { name:"Fashion", icon:"shirt"},
+  { name:"funiture", icon:"armchair"}
 ]
 
 container.innerHTML = categories.map(cat => `
 
-<div class="category-tab">
+<a href="product-category.html?category=${cat.name.toLowerCase()}" class="category-tab">
 
-<i data-lucide="${cat.icon}" class="cat-icon"></i>
+  <i data-lucide="${cat.icon}" class="cat-icon"></i>
+  <p>${cat.name}</p>
 
-<p>${cat.name}</p>
-
-</div>
+</a>
 
 `).join("")
 
 this.renderIcons()
 
 }
-
 /* ---------------- PRODUCT CARD ---------------- */
 
 productCard(product){

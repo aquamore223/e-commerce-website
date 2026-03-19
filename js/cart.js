@@ -73,13 +73,19 @@ class CartSystem {
     document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
   }
 
-  updateCartCount() {
-    const count = document.querySelector(".cart-count");
-    if (!count) return;
+ updateCartCount() {
+  const count = document.querySelector(".cart-count");
+  if (!count) return;
 
-    const total = this.cart.reduce((sum, item) => sum + item.qty, 0);
-    count.textContent = total;
+  const total = this.cart.reduce((sum, item) => sum + item.qty, 0);
+
+  if (total > 0) {
+    count.style.display = "block";
+    count.textContent = total > 99 ? "99+" : total;
+  } else {
+    count.style.display = "none";
   }
+}
 
   renderCheckout() {
     const container = document.getElementById("checkout-preview");
@@ -176,9 +182,18 @@ class WishlistSystem {
   }
 
   updateCount() {
-    const countEl = document.querySelector(".wish-count");
-    if (countEl) countEl.textContent = this.items.length;
+  const countEl = document.querySelector(".wish-count");
+  if (!countEl) return;
+
+  const total = this.items.length;
+
+  if (total > 0) {
+    countEl.style.display = "block";
+    countEl.textContent = total > 99 ? "99+" : total;
+  } else {
+    countEl.style.display = "none";
   }
+}
 
   isWishlisted(productId) {
     return this.items.some(item => item.id == String(productId));
@@ -216,6 +231,8 @@ window.wishlistSystem = new WishlistSystem();
 window.viewedSystem = new ViewedSystem();
 
 /* ---------------- GLOBAL CLICK EVENTS ---------------- */
+
+
 document.addEventListener("click", (e) => {
 
   /* WISHLIST */
