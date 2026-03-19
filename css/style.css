@@ -57,9 +57,6 @@ img{
 i {
     cursor: pointer; 
 }
-.title:hover {
-    color: var(--secondary-color);
-}
 
 .nav {
     display: flex;
@@ -2292,4 +2289,8 @@ form p a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
+}
+
+.category-title{
+    margin:50px 0 ;
 }
