@@ -1,5 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadCategoryProducts();
+
+  // ensure wishlist count shows correctly on load
+  if (window.wishlistSystem?.updateCount) {
+    wishlistSystem.updateCount();
+  }
 });
 
 /* ---------------- LOAD CATEGORY PRODUCTS ---------------- */
@@ -35,8 +40,11 @@ function loadCategoryProducts() {
 
   container.innerHTML = filtered.map(p => productCard(p)).join("");
 
-  // 🔥 re-render lucide icons
+  // render lucide icons
   if (window.lucide) lucide.createIcons();
+
+  // apply active states after render
+  applyIconStates();
 }
 
 /* ---------------- PRODUCT CARD ---------------- */
@@ -62,11 +70,11 @@ function productCard(product) {
       <div class="scroll-icon">
 
         <span class="heart-icon" data-id="${product.id}">
-          <i data-lucide="heart" class="${wishlistSystem?.isWishlisted?.(product.id) ? 'filled' : ''}"></i>
+          <i data-lucide="heart"></i>
         </span>
 
         <span class="eye-icon" data-id="${product.id}">
-          <i data-lucide="eye" class="${viewedSystem?.isViewed?.(product.id) ? 'viewed' : ''}"></i>
+          <i data-lucide="eye"></i>
         </span>
 
       </div>
@@ -115,48 +123,27 @@ function stars(rating = 0) {
   return starHTML;
 }
 
-/* ---------------- GLOBAL CLICK LISTENER ---------------- */
+/* ---------------- APPLY ICON STATES ---------------- */
 
-document.addEventListener("click", (e) => {
+function applyIconStates() {
 
-  // ❤️ Wishlist
-  const heart = e.target.closest(".heart-icon");
-  if (heart) {
+  // ❤️ wishlist state
+  document.querySelectorAll(".heart-icon").forEach((heart) => {
     const id = heart.dataset.id;
-
-    if (window.wishlistSystem?.toggle) {
-      wishlistSystem.toggle(id);
-    }
-
     const icon = heart.querySelector("i");
-    if (icon && window.wishlistSystem?.isWishlisted) {
-      icon.classList.toggle("filled", wishlistSystem.isWishlisted(id));
+
+    if (icon && window.wishlistSystem?.isWishlisted(id)) {
+      icon.classList.add("filled");
     }
-  }
+  });
 
-  // 👁 Viewed
-  const eye = e.target.closest(".eye-icon");
-  if (eye) {
-    const id = eye.dataset.id;
+  // 👁 viewed state
+  document.querySelectorAll(".scroll").forEach((card) => {
+    const id = card.dataset.productId;
+    const eyeIcon = card.querySelector(".eye-icon i");
 
-    if (window.viewedSystem?.markViewed) {
-      viewedSystem.markViewed(id);
+    if (eyeIcon && window.viewedSystem?.isViewed(id)) {
+      eyeIcon.classList.add("viewed");
     }
-
-    const icon = eye.querySelector("i");
-    if (icon) icon.classList.add("viewed");
-  }
-
-  // 🛒 Cart
-  const btn = e.target.closest(".add-to-cart-btn");
-  if (btn) {
-    const id = btn.dataset.id;
-
-    if (typeof addToCart === "function") {
-      addToCart(id);
-    } else {
-      console.warn("addToCart() not found");
-    }
-  }
-
-});
+  });
+}
