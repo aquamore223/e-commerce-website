@@ -8,8 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ---------------- LOAD CATEGORY PRODUCTS ---------------- */
+async function loadCategoryProducts() {
 
-function loadCategoryProducts() {
   const container = document.querySelector(".products-container");
   const title = document.querySelector(".category-title");
 
@@ -27,27 +27,59 @@ function loadCategoryProducts() {
     title.textContent = category.toUpperCase();
   }
 
-  const allProducts = Object.values(products);
+  try {
+    // 🔥 USE GLOBAL PB + CORRECT COLLECTION
+    const result = await window.pb
+      .collection("exclusive_ecommerce")
+      .getFullList();
 
-  const filtered = allProducts.filter(
-    (p) => p.category === category
-  );
+    // 🔥 FORMAT + FILTER
+    const filtered = result
+      .map(p => formatPBProduct(p))
+      .filter(p => p.category?.toLowerCase() === category.toLowerCase())
 
-  if (filtered.length === 0) {
-    container.innerHTML = "<p>No products found</p>";
-    return;
+    if (filtered.length === 0) {
+      container.innerHTML = "<p>No products found</p>";
+      return;
+    }
+
+    // 🔥 RENDER
+    container.innerHTML = filtered
+      .map(p => productCard(p))
+      .join("");
+
+    if (window.lucide) lucide.createIcons();
+    applyIconStates();
+
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "<p>Error loading products</p>";
   }
-
-  container.innerHTML = filtered.map(p => productCard(p)).join("");
-
-  // render lucide icons
-  if (window.lucide) lucide.createIcons();
-
-  // apply active states after render
-  applyIconStates();
 }
 
 /* ---------------- PRODUCT CARD ---------------- */
+
+function formatPBProduct(p){
+
+  let imageUrl = p.image;
+
+  // handle array
+  if (Array.isArray(imageUrl)) {
+    imageUrl = imageUrl[0];
+  }
+
+  return {
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    oldPrice: p.oldPrice,
+    category: p.category,
+    img: imageUrl, // 👈 IMPORTANT
+    rating: p.rating || 0,
+    reviews: p.reviews || 0,
+    tag: p.flashSale ? "-SALE" : ""
+  };
+}
 
 function productCard(product) {
   const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";

@@ -1,3 +1,6 @@
+const pb = new PocketBase("https://itrain.services.hodessy.com");
+
+window.pb = pb;
 
 function getBasePath() {
     const path = window.location.pathname;

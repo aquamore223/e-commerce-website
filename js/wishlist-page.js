@@ -1,19 +1,19 @@
-// wishlist-page.js - Fully dynamic wishlist page
+// wishlist-page.js - Fully dynamic wishlist page with PocketBase support
 
 document.addEventListener('DOMContentLoaded', function() {
     initWishlistPage();
 });
 
-function initWishlistPage() {
+async function initWishlistPage() {
     // Load wishlist from localStorage
-    loadWishlistItems();
+    await loadWishlistItems();
     setupEventListeners();
     updateWishlistCount();
-    loadJustForYou();
+    await loadJustForYou();
 }
 
-function loadWishlistItems() {
-    const wishlist = getWishlist();
+async function loadWishlistItems() {
+    const wishlist = await getWishlist();
     const container = document.querySelector('.wishlist-main .wish-grid');
     const countSpan = document.querySelector('.wish-hd h4 span');
     
@@ -35,7 +35,7 @@ function loadWishlistItems() {
             </div>
         `;
     } else {
-        // Render wishlist items
+        // Render wishlist items - NO RATING STARS
         container.innerHTML = wishlist.map(item => `
             <div class="scroll" data-product-id="${item.id}">
                 <div class="scroll-img-section">
@@ -48,13 +48,15 @@ function loadWishlistItems() {
                             <i data-lucide="trash-2" width="15" height="15"></i>
                         </span>
                     </div>
-                    <button class="add-to-cart-btn" data-id="${item.id}">Add to Cart</button>
+                    <button class="add-to-cart-btn" data-id="${item.id}">
+                        <i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart
+                    </button>
                 </div>
                 <div class="scroll-text">
                     <a href="/product-details.html?id=${item.id}">
                         <h5>${item.name || 'Product'}</h5>
                     </a>
-                    <p>$${item.price || '0'} ${item.oldPrice ? `<span>$${item.oldPrice}</span>` : ''}</p>
+                    <p>${formatPrice(item.price || '0')} ${item.oldPrice ? `<span>${formatPrice(item.oldPrice)}</span>` : ''}</p>
                 </div>
             </div>
         `).join('');
@@ -88,7 +90,7 @@ function setupEventListeners() {
     });
     
     // Move all to cart button
-    const moveAllBtn = document.querySelector('.wish-hd .shadow-btn');
+    const moveAllBtn = document.querySelector('.wishlist-main .wish-hd .shadow-btn');
     if (moveAllBtn) {
         // Remove existing listener to prevent duplicates
         moveAllBtn.removeEventListener('click', moveAllToCart);
@@ -96,8 +98,8 @@ function setupEventListeners() {
     }
     
     // Just For You - View All button
-    const viewAllBtn = document.querySelector('.wish-hd .shadow-btn:last-child');
-    if (viewAllBtn && !viewAllBtn.id) {
+    const viewAllBtn = document.querySelectorAll('.wish-hd .shadow-btn')[1];
+    if (viewAllBtn) {
         viewAllBtn.addEventListener('click', function() {
             window.location.href = '/index.html';
         });
@@ -108,7 +110,7 @@ function deleteFromWishlist(productId) {
     if (!productId) return;
     
     // Get current wishlist
-    let wishlist = getWishlist();
+    let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
     
     // Filter out the item
     wishlist = wishlist.filter(item => item.id != productId);
@@ -128,22 +130,30 @@ function deleteFromWishlist(productId) {
             // Reload the wishlist items
             loadWishlistItems();
             updateWishlistCount();
+            loadJustForYou();
         }, 300);
     } else {
         // If element not found, just reload
         loadWishlistItems();
         updateWishlistCount();
+        loadJustForYou();
     }
     
     // Dispatch event for other pages
     document.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: wishlist }));
+    
+    // Update wishlistSystem if exists
+    if (window.wishlistSystem) {
+        window.wishlistSystem.items = wishlist;
+        window.wishlistSystem.updateCount();
+    }
 }
 
-function addToCartFromWishlist(productId, btnElement) {
+async function addToCartFromWishlist(productId, btnElement) {
     if (!productId) return;
     
     // Get product details from wishlist
-    const wishlist = getWishlist();
+    const wishlist = await getWishlist();
     const product = wishlist.find(item => item.id == productId);
     
     if (!product) return;
@@ -151,20 +161,23 @@ function addToCartFromWishlist(productId, btnElement) {
     // Check if cart system exists
     if (window.cartSystem) {
         // Add to cart
-        window.cartSystem.addToCart(productId);
+        await window.cartSystem.addToCart(productId);
         
         // Show button feedback
-        const originalText = btnElement.textContent;
-        btnElement.textContent = '✓ Added';
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = '<i data-lucide="check" width="14" height="14"></i> Added';
         btnElement.classList.add('added');
         btnElement.style.background = '#4CAF50';
         btnElement.style.color = 'white';
         
         setTimeout(() => {
-            btnElement.textContent = originalText;
+            btnElement.innerHTML = '<i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart';
             btnElement.classList.remove('added');
             btnElement.style.background = '';
             btnElement.style.color = '';
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
         }, 1500);
         
         showNotification(`${product.name || 'Product'} added to cart`);
@@ -174,10 +187,10 @@ function addToCartFromWishlist(productId, btnElement) {
     }
 }
 
-function moveAllToCart(e) {
+async function moveAllToCart(e) {
     e.preventDefault();
     
-    const wishlist = getWishlist();
+    const wishlist = await getWishlist();
     
     if (wishlist.length === 0) {
         showNotification('Your wishlist is empty', 'error');
@@ -190,9 +203,9 @@ function moveAllToCart(e) {
     }
     
     // Add all items to cart
-    wishlist.forEach(item => {
-        window.cartSystem.addToCart(item.id);
-    });
+    for (const item of wishlist) {
+        await window.cartSystem.addToCart(item.id);
+    }
     
     // Clear wishlist
     localStorage.setItem('wishlist', JSON.stringify([]));
@@ -201,56 +214,134 @@ function moveAllToCart(e) {
     showNotification(`Added ${wishlist.length} items to cart`);
     
     // Reload wishlist items
-    loadWishlistItems();
+    await loadWishlistItems();
     updateWishlistCount();
+    await loadJustForYou();
     
     // Dispatch event
     document.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: [] }));
+    
+    // Update wishlistSystem if exists
+    if (window.wishlistSystem) {
+        window.wishlistSystem.items = [];
+        window.wishlistSystem.updateCount();
+    }
 }
 
-function getWishlist() {
+async function getWishlist() {
     try {
         const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-        // Ensure each item has required fields
-        return wishlist.map(item => {
-            // If item is just an ID (string/number), convert to object
+        
+        // Process each wishlist item to ensure it has full details
+        const processedWishlist = [];
+        
+        for (const item of wishlist) {
+            // If item is just an ID (string/number), fetch full details
             if (typeof item === 'string' || typeof item === 'number') {
-                return {
-                    id: item.toString(),
-                    name: 'Product',
-                    price: '0',
-                    img: '/images/placeholder.jpg'
-                };
+                const fullProduct = await fetchProductDetails(item.toString());
+                if (fullProduct) {
+                    processedWishlist.push(fullProduct);
+                }
+            } 
+            // If it's already an object but missing details, fetch full details
+            else if (item.id && (!item.name || !item.price)) {
+                const fullProduct = await fetchProductDetails(item.id);
+                if (fullProduct) {
+                    processedWishlist.push(fullProduct);
+                } else {
+                    // Keep original if fetch fails
+                    processedWishlist.push({
+                        id: item.id || '0',
+                        name: item.name || 'Product',
+                        price: item.price || '0',
+                        img: item.img || '/images/placeholder.jpg',
+                        discount: item.discount || 0,
+                        oldPrice: item.oldPrice || null
+                    });
+                }
             }
-            // If it's already an object, ensure it has all fields
-            return {
-                id: item.id || '0',
-                name: item.name || 'Product',
-                price: item.price || '0',
-                img: item.img || '/images/placeholder.jpg',
-                discount: item.discount || 0,
-                oldPrice: item.oldPrice || null
-            };
-        });
+            // Already has all details
+            else {
+                processedWishlist.push({
+                    id: item.id || '0',
+                    name: item.name || 'Product',
+                    price: item.price || '0',
+                    img: item.img || '/images/placeholder.jpg',
+                    discount: item.discount || 0,
+                    oldPrice: item.oldPrice || null
+                });
+            }
+        }
+        
+        return processedWishlist;
     } catch (e) {
         console.error('Error parsing wishlist:', e);
         return [];
     }
 }
 
+async function fetchProductDetails(productId) {
+    // Try local products first
+    if (typeof products !== 'undefined' && products[productId]) {
+        return products[productId];
+    }
+    
+    // Try PocketBase
+    if (window.pb) {
+        try {
+            const pbProduct = await window.pb.collection("exclusive_ecommerce").getOne(productId);
+            if (pbProduct) {
+                return {
+                    id: pbProduct.id,
+                    name: pbProduct.name,
+                    price: typeof pbProduct.price === 'number' ? pbProduct.price : parseFloat(pbProduct.price) || 0,
+                    img: getProductImage(pbProduct),
+                    oldPrice: pbProduct.oldPrice,
+                    discount: pbProduct.flashSale ? pbProduct.discount : 0,
+                    category: pbProduct.category
+                };
+            }
+        } catch (error) {
+            console.error("Error fetching from PocketBase:", error);
+        }
+    }
+    
+    return null;
+}
+
+function getProductImage(product) {
+    if (product.image) {
+        if (typeof product.image === 'string') {
+            if (product.image.startsWith('http')) {
+                return product.image;
+            }
+            return window.pb.files.getURL(product, product.image);
+        } else if (Array.isArray(product.image) && product.image.length > 0) {
+            return window.pb.files.getURL(product, product.image[0]);
+        }
+    }
+    return '/images/placeholder.jpg';
+}
+
 function updateWishlistCount() {
-    const wishlist = getWishlist();
+    const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+    const count = wishlist.length;
     
     // Update count in header
     const headerCount = document.querySelector('.wish-count');
     if (headerCount) {
-        headerCount.textContent = wishlist.length;
+        if (count > 0) {
+            headerCount.style.display = "block";
+            headerCount.textContent = count > 99 ? "99+" : count;
+        } else {
+            headerCount.style.display = "none";
+        }
     }
     
     // Update count in wishlist page header
-    const pageCount = document.querySelector('.wish-hd h4 span');
+    const pageCount = document.querySelector('.wishlist-main .wish-hd h4 span');
     if (pageCount) {
-        pageCount.textContent = `(${wishlist.length})`;
+        pageCount.textContent = `(${count})`;
     }
 }
 
@@ -294,28 +385,62 @@ function showNotification(message, type = 'success') {
         notification.style.opacity = '0';
         notification.style.transform = 'translateX(100%)';
     }, 2000);
-
-    
 }
 
-function loadJustForYou() {
+async function loadJustForYou() {
     const container = document.querySelector('.just-for-you');
     if (!container) return;
 
-    const wishlist = getWishlist().map(item => String(item.id));
-    const allProducts = Object.values(products);
-
-    // ❗ Filter out wishlist items
+    // Get wishlist IDs to exclude
+    const wishlist = await getWishlist();
+    const wishlistIds = wishlist.map(item => String(item.id));
+    
+    let allProducts = [];
+    
+    // Try to get products from PocketBase first
+    if (window.pb) {
+        try {
+            const pbProducts = await window.pb.collection("exclusive_ecommerce").getFullList({
+                sort: '-created',
+                limit: 20
+            });
+            
+            allProducts = pbProducts.map(p => ({
+                id: p.id,
+                name: p.name,
+                price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+                img: getProductImage(p),
+                oldPrice: p.oldPrice,
+                tag: p.flashSale ? "-SALE" : (p.newArrival ? "NEW" : ""),
+                rating: p.rating || 4,
+                reviews: p.reviews || 0
+            }));
+        } catch (error) {
+            console.error("Error fetching from PocketBase:", error);
+        }
+    }
+    
+    // Fallback to local products if PocketBase fails or has no products
+    if (allProducts.length === 0 && typeof products !== 'undefined') {
+        allProducts = Object.values(products);
+    }
+    
+    // Filter out wishlist items and randomize
     const recommendations = allProducts
-        .filter(p => !wishlist.includes(String(p.id)))
-        .sort(() => 0.5 - Math.random()) // random
-        .slice(0, 4); // show 4
+        .filter(p => !wishlistIds.includes(String(p.id)))
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 4);
+
+    if (recommendations.length === 0) {
+        container.innerHTML = '<p style="text-align:center; grid-column:1/-1; padding:40px;">No recommendations available</p>';
+        return;
+    }
 
     container.innerHTML = recommendations.map(p => `
         <div class="scroll">
             <a href="/product-details.html?id=${p.id}">
                 <div class="scroll-img-section">
-                    <img src="${p.img}" alt="${p.name}">
+                    <img src="${p.img}" alt="${p.name}" onerror="this.src='/images/placeholder.jpg'">
                     ${p.tag ? `<span class="scroll-tag">${p.tag}</span>` : ""}
                     
                     <div class="scroll-icon">
@@ -325,7 +450,7 @@ function loadJustForYou() {
                     </div>
 
                     <button class="add-to-cart-btn" data-id="${p.id}">
-                        Add To Cart
+                        <i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart
                     </button>
                 </div>
             </a>
@@ -336,11 +461,10 @@ function loadJustForYou() {
                     ${formatPrice(p.price)}
                     ${p.oldPrice ? `<span>${formatPrice(p.oldPrice)}</span>` : ""}
                 </p>
-                <p class="rating">
-                    ${[...Array(5)].map((_,i) => 
-                        `<i data-lucide="star" class="${i < (p.rating||4)?'full':'empty'}"></i>`
-                    ).join('')}
-                </p>
+                <div class="rating">
+                    ${generateStars(p.rating || 4)}
+                    <span>(${p.reviews || 0})</span>
+                </div>
             </div>
         </div>
     `).join('');
@@ -349,7 +473,23 @@ function loadJustForYou() {
         setTimeout(() => lucide.createIcons(), 50);
     }
 }
-    
+
+function formatPrice(price) {
+    if (typeof price === "string") {
+        price = parseFloat(price.replace(/[^0-9.-]/g, ""));
+    }
+    if (isNaN(price)) price = 0;
+    return `$${price.toFixed(2)}`;
+}
+
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        stars += `<i data-lucide="star" class="${i <= rating ? 'full' : 'empty'}"></i>`;
+    }
+    return stars;
+}
+
 // Export for use in other files
 window.wishlistPage = {
     reload: loadWishlistItems,

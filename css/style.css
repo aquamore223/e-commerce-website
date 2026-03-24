@@ -373,13 +373,19 @@ i {
     flex-direction: column;
     width:250px;
     height:250px;
-    background-color: #f7f3f3af;
-    padding: 30px;
+     
     border-radius:5px;
+    overflow: hidden;
     transition: transform 0.25s ease;
 }
 .scroll-img-section:hover{
     transform:scale(1.03);
+}
+
+.scroll-img-section img{
+    object-fit:cover;
+    width:100%;
+    height:100%;
 }
 button:hover{
     background-color:lighter;
@@ -418,7 +424,7 @@ button:hover{
     gap:3px;
 }
 .scroll-icon span{
-    background-color: white;
+    background-color: rgb(247, 237, 237);
     border-radius:50%;
     padding:5px;
     display: flex;
@@ -1061,11 +1067,11 @@ color: white;
     display: none;
 }
 
-.heart-icon i.filled {
+.heart-icon svg.filled {
     color: red;
 }
 
-.eye-icon i.viewed {
+.eye-icon svg.viewed {
     color: #ffb400; /* or any color you like */
 }
 
@@ -1970,6 +1976,8 @@ form p a {
     display: grid;
     grid-template-columns: 10% 50% 40%;
     margin-bottom: 90px;
+    gap:20px;
+     
 }
 
 /* ---------------------- THUMBNAILS ---------------------- */
@@ -1987,7 +1995,8 @@ form p a {
 
 .product-img-wrapper img {
     width: 100%;
-    object-fit: contain; /* keeps aspect ratio */
+    height: 100%;
+    object-fit: cover;
 }
 
 /* container for thumbnails */
@@ -1996,7 +2005,7 @@ form p a {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 400px;  /* match hero height */
+    max-height: 500px;  
     overflow-y: auto;    /* scroll if too many thumbnails */
     padding-right: 5px;  /* avoid scrollbar overlapping images */
 }
@@ -2016,17 +2025,16 @@ form p a {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: hsl(15, 6%, 95%);
-    height: 400px;        
-    width: 100%;
+    background-color: hsl(15, 6%, 95%);        
     overflow: hidden; 
     border-radius: 5px;
+    overflow: scroll;
 }
 
 .product-hero img {
-    max-height: 100%;     
-    max-width: 100%;     
-    object-fit: contain; 
+    height: 100%;  
+    width: 100%;     
+    object-fit: cover; 
     transition: transform 0.3s ease;
 }
 
@@ -2259,25 +2267,6 @@ form p a {
     }
 }
 
-.admin-main{
-    padding: 30px 150px;
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-}
-.admin-form{
-    display: flex;
-    flex-direction: column;
-    max-width:800px;
-    gap:10px;
-}
-
-.admin-form input{
-    font-size:20px;
-    background-color: hsl(0, 0%, 95%);
-    border: none;
-    box-shadow: 1px 1px 1px grey;
-}
 .dsp-flx{
     display: flex;
     justify-content: space-between;
@@ -2293,4 +2282,52 @@ form p a {
 
 .category-title{
     margin:50px 0 ;
+}
+
+/* Arrow button disabled state */
+.arrow .roundArrow.disabled,
+.arrow .roundArrow:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Smooth transitions for carousel */
+.first-product-scroll .scroller,
+.best-product-scroll .scroller,
+.our-products .scroller {
+    transition: all 0.3s ease;
+}
+
+/* Hide scrollbar but keep functionality */
+.first-product-scroll .scroller,
+.best-product-scroll .scroller,
+.our-products .scroller {
+    overflow-x: hidden;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.scroll {
+    flex: 0 0 calc(25% - 15px);
+    min-width: 250px;
+}
+
+@media (max-width: 1200px) {
+    .scroll {
+        flex: 0 0 calc(33.333% - 14px);
+    }
+}
+
+@media (max-width: 768px) {
+    .scroll {
+        flex: 0 0 calc(50% - 10px);
+    }
+}
+
+@media (max-width: 480px) {
+    .scroll {
+        flex: 0 0 100%;
+    }
 }
