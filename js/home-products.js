@@ -1,9 +1,7 @@
-
 class HomeProductsLoader {
 
-  constructor(){
+  constructor() {
     document.addEventListener("DOMContentLoaded", async () => {
-      // Wait for pocketbase to be available
       if (!window.pb) {
         console.log("Waiting for PocketBase...");
         setTimeout(() => this.init(), 500);
@@ -17,13 +15,25 @@ class HomeProductsLoader {
     try {
       this.products = await this.getProductsFromDB();
       console.log("Products loaded:", this.products.length);
-      console.log("Best selling products:", this.products.filter(p => p.bestSelling));
-      console.log("Flash sale products:", this.products.filter(p => p.flashSale));
+      
+      // Log product counts
+      const flashCount = this.products.filter(p => p.flashSale).length;
+      const bestCount = this.products.filter(p => p.bestSelling).length;
+      console.log(`Flash sale products: ${flashCount}, Best selling products: ${bestCount}`);
+      
+      // EXPOSE GLOBALLY FOR SEARCH
+      window.allProducts = this.products;
+      window.homeProductsLoader = this;
       
       this.loadFlashSales();
       this.loadBestSelling();
       this.loadOurProducts();
       this.loadCategories();
+      
+      // Setup scroll arrows after products are loaded
+      setTimeout(() => {
+        this.setupScrollArrows();
+      }, 200);
     } catch (err) {
       console.error("Error initializing HomeProductsLoader:", err);
     }
@@ -49,7 +59,6 @@ class HomeProductsLoader {
   formatPBProduct(p) {
     let imageUrl = p.image;
     
-    // Handle PocketBase file URLs
     if (imageUrl && typeof imageUrl === 'string') {
       if (imageUrl.startsWith('/')) {
         imageUrl = window.pb.files.getURL(p, imageUrl);
@@ -58,7 +67,6 @@ class HomeProductsLoader {
       imageUrl = window.pb.files.getURL(p, imageUrl[0]);
     }
     
-    // Fallback to placeholder
     if (!imageUrl || imageUrl === '') {
       imageUrl = '/images/placeholder.jpg';
     }
@@ -73,18 +81,21 @@ class HomeProductsLoader {
       rating: p.rating || 4,
       reviews: p.reviews || 0,
       flashSale: p.flashSale === true || p.flashSale === "true",
-      bestSelling: p.bestSelling === true || p.bestSelling === "true",
-      tag: p.flashSale ? "-SALE" : (p.newArrival ? "NEW" : "")
+      bestSelling: p.bestSelling === true || p.bestSelling === "true"
     };
+  }
+
+  /* ---------------- GET TAG ---------------- */
+  getTag(product) {
+    if (product.flashSale) return "-10%";
+    if (product.bestSelling) return "NEW";
+    return "";
   }
 
   /* ---------------- FLASH SALES ---------------- */
   loadFlashSales() {
     const container = document.querySelector(".first-product-scroll .scroller");
-    if (!container) {
-      console.warn("Flash sales container not found");
-      return;
-    }
+    if (!container) return;
     
     const flashProducts = this.products.filter(p => p.flashSale === true);
     console.log("Flash products count:", flashProducts.length);
@@ -98,17 +109,10 @@ class HomeProductsLoader {
     this.renderIcons();
   }
 
-  /* ---------------- BEST SELLING - FIXED ---------------- */
+  /* ---------------- BEST SELLING ---------------- */
   loadBestSelling() {
-    // Try multiple possible selectors
     let container = document.querySelector(".best-product-scroll .scroller");
     
-    // If not found, try the specific class
-    if (!container) {
-      container = document.querySelector(".best-selling-container");
-    }
-    
-    // If still not found, try the general scroller inside best-product-scroll
     if (!container) {
       const bestScroll = document.querySelector(".best-product-scroll");
       if (bestScroll) {
@@ -116,10 +120,7 @@ class HomeProductsLoader {
       }
     }
     
-    if (!container) {
-      console.warn("Best selling container not found. Selector tried: .best-product-scroll .scroller, .best-selling-container");
-      return;
-    }
+    if (!container) return;
     
     const bestProducts = this.products.filter(p => p.bestSelling === true);
     console.log("Best selling products count:", bestProducts.length);
@@ -144,22 +145,112 @@ class HomeProductsLoader {
     
     const all = this.products;
     
-    // Display first 3 products in first container
-    containers[0].innerHTML = all.slice(0, 3).map(p => this.productCard(p)).join("");
-    
-    // Display next 3 products in second container
-    containers[1].innerHTML = all.slice(3, 6).map(p => this.productCard(p)).join("");
+    containers[0].innerHTML = all.slice(0, 6).map(p => this.productCard(p)).join("");
+    containers[1].innerHTML = all.slice(6, 12).map(p => this.productCard(p)).join("");
     
     this.renderIcons();
+  }
+
+  /* ---------------- SETUP SCROLL ARROWS ---------------- */
+  setupScrollArrows() {
+    // Flash Sales Arrows
+    this.setupSectionArrows(
+      ".first-product-scroll",
+      ".first-product-scroll .scroller"
+    );
+    
+    // Best Selling Arrows
+    this.setupSectionArrows(
+      ".best-product-scroll",
+      ".best-product-scroll .scroller"
+    );
+    
+    // Our Products - First container
+    this.setupSectionArrows(
+      ".our-products",
+      ".our-products .scroller:first-child"
+    );
+  }
+  
+  setupSectionArrows(sectionSelector, scrollerSelector) {
+    const section = document.querySelector(sectionSelector);
+    if (!section) return;
+    
+    const scroller = document.querySelector(scrollerSelector);
+    if (!scroller) return;
+    
+    // Find arrows in the same section or nearby
+    let arrows = [];
+    
+    // Check if this is flash sales or best selling
+    if (sectionSelector.includes('first-product')) {
+      const flashSection = document.querySelector('#first-content');
+      if (flashSection) {
+        arrows = flashSection.querySelectorAll('.arrow .roundArrow');
+      }
+    } else if (sectionSelector.includes('best-product')) {
+      // Find the category section's arrows (best selling is inside category div)
+      const categorySection = document.querySelector('.category');
+      if (categorySection) {
+        const bestHeader = categorySection.querySelector('.grid-top-designs');
+        if (bestHeader) {
+          arrows = bestHeader.querySelectorAll('.arrow .roundArrow');
+        }
+      }
+    } else if (sectionSelector.includes('our-products')) {
+      // Find the our products section header
+      const ourHeader = document.querySelector('#top-marg');
+      if (ourHeader) {
+        arrows = ourHeader.querySelectorAll('.arrow .roundArrow');
+      }
+    }
+    
+    if (!arrows || arrows.length < 2) {
+      console.warn(`Arrows not found for ${sectionSelector}`);
+      return;
+    }
+    
+    const leftArrow = arrows[0];
+    const rightArrow = arrows[1];
+    
+    // Scroll amount (3 products at a time)
+    const firstProduct = scroller.querySelector('.scroll');
+    if (!firstProduct) return;
+    
+    const productWidth = firstProduct.offsetWidth;
+    const gap = 20;
+    const scrollAmount = (productWidth + gap) * 3; // Scroll 3 products at a time
+    
+    // Remove existing listeners
+    const newLeftArrow = leftArrow.cloneNode(true);
+    const newRightArrow = rightArrow.cloneNode(true);
+    leftArrow.parentNode.replaceChild(newLeftArrow, leftArrow);
+    rightArrow.parentNode.replaceChild(newRightArrow, rightArrow);
+    
+    // Add click handlers
+    newLeftArrow.onclick = (e) => {
+      e.preventDefault();
+      scroller.scrollBy({
+        left: -scrollAmount,
+        behavior: 'smooth'
+      });
+    };
+    
+    newRightArrow.onclick = (e) => {
+      e.preventDefault();
+      scroller.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    };
+    
+    console.log(`✅ Scroll arrows set up for ${sectionSelector}`);
   }
 
   /* ---------------- CATEGORIES ---------------- */
   loadCategories() {
     const container = document.querySelector(".category-tabs");
-    if (!container) {
-      console.warn("Categories container not found");
-      return;
-    }
+    if (!container) return;
 
     const categories = [
       { name: "Phones", icon: "smartphone" },
@@ -180,14 +271,43 @@ class HomeProductsLoader {
     `).join("");
 
     this.renderIcons();
+    this.setupCategoryScroll();
+  }
+  
+  /* ---------------- CATEGORY SCROLL ---------------- */
+  setupCategoryScroll() {
+    const categorySection = document.querySelector(".category");
+    if (!categorySection) return;
+    
+    const arrows = categorySection.querySelectorAll(".arrow .roundArrow");
+    const categoryTabs = document.querySelector(".category-tabs");
+    
+    if (!arrows.length || !categoryTabs) return;
+    
+    const scrollAmount = 200;
+    
+    // Remove existing listeners
+    const newLeftArrow = arrows[0].cloneNode(true);
+    const newRightArrow = arrows[1].cloneNode(true);
+    arrows[0].parentNode.replaceChild(newLeftArrow, arrows[0]);
+    arrows[1].parentNode.replaceChild(newRightArrow, arrows[1]);
+    
+    newLeftArrow.onclick = (e) => {
+      e.preventDefault();
+      categoryTabs.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    };
+    
+    newRightArrow.onclick = (e) => {
+      e.preventDefault();
+      categoryTabs.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    };
   }
 
   /* ---------------- PRODUCT CARD ---------------- */
   productCard(product) {
     const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";
-    const tag = product.tag ? `<span class="scroll-tag">${product.tag}</span>` : "";
+    const tag = this.getTag(product);
     
-    // Safely check wishlist status
     const isWishlisted = window.wishlistSystem ? 
       window.wishlistSystem.isWishlisted(product.id) : false;
     
@@ -200,7 +320,7 @@ class HomeProductsLoader {
           <a href="product-details.html?id=${product.id}">
             <img src="${product.img}" alt="${product.name}" onerror="this.src='/images/placeholder.jpg'">
           </a>
-          ${tag}
+          ${tag ? `<span class="scroll-tag ${product.flashSale ? 'flash-tag' : 'best-tag'}">${tag}</span>` : ""}
           <div class="scroll-icon">
             <span class="heart-icon" data-id="${product.id}">
               <i data-lucide="heart" class="${isWishlisted ? 'filled' : ''}"></i>
@@ -255,7 +375,6 @@ class HomeProductsLoader {
 
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-  // Wait for pocketbase
   const checkPB = setInterval(() => {
     if (window.pb) {
       clearInterval(checkPB);
@@ -263,11 +382,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, 100);
   
-  // Timeout after 3 seconds
   setTimeout(() => {
     clearInterval(checkPB);
     if (!window.pb) {
-      console.warn("PocketBase not loaded, using local products");
+      console.warn("PocketBase not loaded");
       window.pb = { collection: () => ({ getFullList: async () => [] }) };
       new HomeProductsLoader();
     }

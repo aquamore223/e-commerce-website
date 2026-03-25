@@ -111,6 +111,42 @@ i {
 .search:hover {
     background-color: rgb(247, 241, 241);
 }
+/* Search Results Dropdown */
+.search {
+    position: relative;
+}
+
+.search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 5px;
+}
+
+.search-results-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-results-dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.search-results-dropdown::-webkit-scrollbar-thumb {
+    background: #db4444;
+    border-radius: 3px;
+}
+
+.search-result-item:hover {
+    background: #fafafa;
+}
 .user-icon svg:hover{
    color: var(--secondary-color);
 }
@@ -372,8 +408,7 @@ i {
     position: relative;
     flex-direction: column;
     width:250px;
-    height:250px;
-     
+    height:250px; 
     border-radius:5px;
     overflow: hidden;
     transition: transform 0.25s ease;
@@ -395,23 +430,32 @@ button:hover{
     color: var(--text-color);
 }
  
-.scroll-tag{
-    width:3rem;
-    height:0.5rem;
-    color: #f5f5f5;
-    background-color: var(--secondary-color);
-    padding:12px 15px;
+/* Tag Styles */
+.scroll-tag {
     position: absolute;
-    display: flex;
-    align-items:center;
-    justify-content: center;
-    font-size:10px;
+    top: 10px;
+    left: 10px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
     font-weight: bold;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    border-radius:10%;
-    left: 0;
-    top:0;
-    margin:10px;  
+    color: white;
+    z-index: 10;
+}
+
+.flash-tag {
+    background: #db4444;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.best-tag {
+    background: #4CAF50;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
 .scroll-icon{
@@ -475,7 +519,10 @@ button:hover{
     background-color: hsl(30, 6%, 25%);
 
 }
-
+.add-to-cart-btn.added{
+background: green;
+color: white;
+}
 .scroll-text{
      display: flex;
      flex-direction: column;
@@ -516,10 +563,16 @@ button:hover{
 
 .scroller{
     display: flex;
-    gap: 15px;
+    gap: 20px;
     overflow-x: auto;
-    scrollbar-width: none;
-    margin-bottom: 30px;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+.scroll {
+    min-width: 250px;   
+    flex: 0 0 auto ;      
 }
 #salesCounter{
     color: grey;
@@ -884,10 +937,7 @@ button:hover{
     color: var(--text-color);
 }
 
-.add-to-cart-btn.added{
-background: green;
-color: white;
-}
+
 
 /* Quick View Modal */
 .quick-view-modal {
@@ -1174,9 +1224,9 @@ color: white;
         margin:0;
     }
     .category-tab{
-         width:6rem;
+         width:8rem;
          height:5rem;
-         padding:5px;
+         padding:15px;
     }
     .category-tab p{
     font-size:10px;
@@ -2284,6 +2334,137 @@ form p a {
     margin:50px 0 ;
 }
 
+/* Pagination Styles */
+#pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 40px 0;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.page-number {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.page-number:hover {
+    background: #f5f5f5;
+    border-color: var(--secondary-color);
+}
+
+.page-number.active {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.page-ellipsis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    color: #999;
+}
+
+.per-page-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid #ddd;
+}
+
+.per-page-selector select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background: white;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: #666;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid #ddd;
+}
+
+@media (max-width: 768px) {
+    .page-numbers {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .per-page-selector {
+        border-left: none;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    
+    .pagination-info {
+        border-left: none;
+        margin-left: 0;
+        padding-left: 0;
+        width: 100%;
+        text-align: center;
+    }
+    
+    #pagination {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .page-btn {
+        justify-content: center;
+    }
+}
+
 /* Arrow button disabled state */
 .arrow .roundArrow.disabled,
 .arrow .roundArrow:disabled {
@@ -2299,16 +2480,7 @@ form p a {
     transition: all 0.3s ease;
 }
 
-/* Hide scrollbar but keep functionality */
-.first-product-scroll .scroller,
-.best-product-scroll .scroller,
-.our-products .scroller {
-    overflow-x: hidden;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-
+ 
 .scroll {
     flex: 0 0 calc(25% - 15px);
     min-width: 250px;

@@ -1,5 +1,4 @@
 const pb = new PocketBase("https://itrain.services.hodessy.com");
-
 window.pb = pb;
 
 function getBasePath() {
@@ -40,8 +39,8 @@ Promise.all([
     initializeMenu();
     setActiveNav();
     initiUser();
+    initSearch(); // Initialize search after components load
 });
-
 
 // ---------------------- MENU ----------------------
 
@@ -56,28 +55,26 @@ function initializeMenu() {
         navLinks.classList.toggle("active");
         menuIcon.classList.toggle("bx-x");
     };
-  
 }
 
 function initiUser() {
-  const userIcon = document.querySelector('.user-icon');
-  if (!userIcon) return;
+    const userIcon = document.querySelector('.user-icon');
+    if (!userIcon) return;
 
-  const dropdown = userIcon.querySelector('ul');
-  if (!dropdown) return;
+    const dropdown = userIcon.querySelector('ul');
+    if (!dropdown) return;
 
-  userIcon.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dropdown.classList.toggle('active');
-  });
+    userIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('active');
+    });
 
-  document.addEventListener('click', (e) => {
-    if (!userIcon.contains(e.target)) {
-      dropdown.classList.remove('active');
-    }
-  });
+    document.addEventListener('click', (e) => {
+        if (!userIcon.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
 }
-
 
 // ---------------------- ACTIVE NAV ----------------------
 
@@ -93,7 +90,6 @@ function setActiveNav() {
         }
     });
 }
-
 
 // ---------------------- SLIDER ----------------------
 
@@ -149,7 +145,7 @@ if (slider) {
     slider.addEventListener("mouseleave", startAutoSlide);
 }
 
-
+// ---------------------- COUNTDOWN TIMER ----------------------
 
 const daysEl = document.getElementById("days");
 const hoursEl = document.getElementById("hours");
@@ -157,11 +153,9 @@ const minutesEl = document.getElementById("minutes");
 const secondsEl = document.getElementById("seconds");
 
 if (daysEl && hoursEl && minutesEl && secondsEl) {
-
     const targetDate = new Date("Dec 31, 2026 23:59:59").getTime();
 
     const countdown = setInterval(() => {
-
         const now = new Date().getTime();
         const distance = targetDate - now;
 
@@ -178,44 +172,141 @@ if (daysEl && hoursEl && minutesEl && secondsEl) {
         if (distance < 0) {
             clearInterval(countdown);
         }
-
     }, 1000);
 }
 
-function hero2Countdown(){
+// ---------------------- HERO 2 COUNTDOWN ----------------------
 
-const daysEl = document.getElementById("hdays")
-const hoursEl = document.getElementById("hhours")
-const minutesEl = document.getElementById("hminutes")
-const secondsEl = document.getElementById("hseconds")
+function hero2Countdown() {
+    const daysEl = document.getElementById("hdays");
+    const hoursEl = document.getElementById("hhours");
+    const minutesEl = document.getElementById("hminutes");
+    const secondsEl = document.getElementById("hseconds");
 
-if(!daysEl) return
+    if (!daysEl) return;
 
-let totalSeconds =
-(Number(daysEl.textContent) * 86400) +
-(Number(hoursEl.textContent) * 3600) +
-(Number(minutesEl.textContent) * 60) +
-Number(secondsEl.textContent)
+    let totalSeconds = (Number(daysEl.textContent) * 86400) +
+        (Number(hoursEl.textContent) * 3600) +
+        (Number(minutesEl.textContent) * 60) +
+        Number(secondsEl.textContent);
 
-setInterval(()=>{
+    setInterval(() => {
+        if (totalSeconds <= 0) return;
 
-if(totalSeconds <= 0) return
+        totalSeconds--;
 
-totalSeconds--
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
 
-const days = Math.floor(totalSeconds / 86400)
-const hours = Math.floor((totalSeconds % 86400) / 3600)
-const minutes = Math.floor((totalSeconds % 3600) / 60)
-const seconds = totalSeconds % 60
-
-daysEl.textContent = String(days).padStart(2,"0")
-hoursEl.textContent = String(hours).padStart(2,"0")
-minutesEl.textContent = String(minutes).padStart(2,"0")
-secondsEl.textContent = String(seconds).padStart(2,"0")
-
-},1000)
-
+        daysEl.textContent = String(days).padStart(2, "0");
+        hoursEl.textContent = String(hours).padStart(2, "0");
+        minutesEl.textContent = String(minutes).padStart(2, "0");
+        secondsEl.textContent = String(seconds).padStart(2, "0");
+    }, 1000);
 }
 
-hero2Countdown()
+hero2Countdown();
 
+// ==================== SEARCH FUNCTIONALITY ====================
+
+let searchCache = [];
+
+async function getProductsForSearch() {
+    if (window.allProducts && window.allProducts.length > 0) {
+        return window.allProducts;
+    }
+
+    if (searchCache.length > 0) return searchCache;
+
+    try {
+        const data = await window.pb.collection("exclusive_ecommerce").getFullList();
+
+        searchCache = data.map(p => ({
+            id: p.id,
+            name: p.name || "Product",
+            price: p.price || 0,
+            category: p.category || "",
+            img: p.image
+                ? (Array.isArray(p.image)
+                    ? window.pb.files.getURL(p, p.image[0])
+                    : window.pb.files.getURL(p, p.image))
+                : "/images/placeholder.jpg"
+        }));
+
+        return searchCache;
+    } catch (err) {
+        console.error("Search fetch error:", err);
+        return [];
+    }
+}
+
+function initSearch() {
+    const input = document.getElementById("search-input");
+    if (!input) return;
+
+    let dropdown = document.createElement("div");
+    dropdown.className = "search-dropdown";
+    dropdown.style.position = "absolute";
+    dropdown.style.background = "#fff";
+    dropdown.style.width = "100%";
+    dropdown.style.top = "100%";
+    dropdown.style.left = "0";
+    dropdown.style.zIndex = "999";
+    dropdown.style.display = "none";
+
+    input.parentNode.style.position = "relative";
+    input.parentNode.appendChild(dropdown);
+
+    input.addEventListener("input", async () => {
+        const term = input.value.toLowerCase();
+
+        if (!term) {
+            dropdown.style.display = "none";
+            return;
+        }
+
+        const products = await getProductsForSearch();
+
+        const results = products.filter(p =>
+            p.name.toLowerCase().includes(term) ||
+            p.category.toLowerCase().includes(term)
+        );
+
+        dropdown.innerHTML = results.map(p => `
+            <a href="product-details.html?id=${p.id}" style="display:flex; gap:10px; padding:10px;">
+                <img src="${p.img}" style="width:40px;height:40px;">
+                <div>
+                    <p>${p.name}</p>
+                    <span>$${p.price}</span>
+                </div>
+            </a>
+        `).join("");
+
+        dropdown.style.display = "block";
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!input.parentNode.contains(e.target)) {
+            dropdown.style.display = "none";
+        }
+    });
+}
+
+// Run search AFTER everything loads
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        initSearch();
+    }, 500);
+});
+
+// Also try to initialize search after components load
+window.addEventListener('load', () => {
+    console.log("Window fully loaded");
+    setTimeout(() => {
+        if (document.getElementById('search-input')) {
+            initSearch();
+        }
+    }, 500);
+});
