@@ -37,6 +37,35 @@ class HomeProductsLoader {
     } catch (err) {
       console.error("Error initializing HomeProductsLoader:", err);
     }
+
+     try {
+      this.products = await this.getProductsFromDB();
+      console.log("Products loaded:", this.products.length);
+      
+      // Log product counts
+      const flashCount = this.products.filter(p => p.flashSale).length;
+      const bestCount = this.products.filter(p => p.bestSelling).length;
+      console.log(`Flash sale products: ${flashCount}, Best selling products: ${bestCount}`);
+      
+      // EXPOSE GLOBALLY FOR SEARCH
+      window.allProducts = this.products;
+      window.homeProductsLoader = this;
+      
+      this.loadFlashSales();
+      this.loadBestSelling();
+      this.loadOurProducts();
+      this.loadCategories();
+      
+      // 🔥 ADD THIS LINE - Load featured products
+      await this.loadFeaturedProducts();
+      
+      // Setup scroll arrows after products are loaded
+      setTimeout(() => {
+        this.setupScrollArrows();
+      }, 200);
+    } catch (err) {
+      console.error("Error initializing HomeProductsLoader:", err);
+    }
   }
 
   /* ---------------- FETCH FROM POCKETBASE ---------------- */
@@ -245,6 +274,96 @@ class HomeProductsLoader {
     };
     
     console.log(`✅ Scroll arrows set up for ${sectionSelector}`);
+  }
+
+    /* ---------------- FEATURED/NEW ARRIVAL SECTION ---------------- */
+  async loadFeaturedProducts() {
+    const container = document.querySelector(".hero3-grid");
+    if (!container) return;
+
+    // Get products sorted by created date (newest first)
+    const sortedProducts = [...this.products].sort((a, b) => {
+      // If products have created date, use it
+      if (a.created && b.created) {
+        return new Date(b.created) - new Date(a.created);
+      }
+      return 0;
+    });
+
+    // Take the 4 newest products
+    const featuredProducts = sortedProducts.slice(0, 4);
+    
+    if (featuredProducts.length === 0) {
+      console.warn("No products available for featured section");
+      return;
+    }
+    
+    this.renderFeaturedGrid(container, featuredProducts);
+  }
+
+  /* ---------------- RENDER FEATURED GRID ---------------- */
+  renderFeaturedGrid(container, products) {
+    // Ensure we have exactly 4 products (fill with placeholders if needed)
+    const filledProducts = [...products];
+    while (filledProducts.length < 4) {
+      filledProducts.push({
+        id: null,
+        name: "Coming Soon",
+        category: "New Arrival",
+        img: "/images/placeholder.jpg",
+        description: "New products arriving soon!",
+        price: 0
+      });
+    }
+    
+    // Map products to grid positions
+    const gridItems = [
+      { position: "hero3-grid-pic1", size: "large", product: filledProducts[0] },
+      { position: "hero3-grid-pic2", size: "medium", product: filledProducts[1] },
+      { position: "hero3-grid-pic3", size: "small", product: filledProducts[2] },
+      { position: "hero3-grid-pic4", size: "small", product: filledProducts[3] }
+    ];
+    
+    container.innerHTML = gridItems.map(item => `
+      <div class="${item.position}" id="hero3-grid-pic">
+        <img src="${item.product.img}" alt="${item.product.name}" onerror="this.src='/images/placeholder.jpg'">
+        <div class="hero3-layout">
+          <h3>${this.escapeHtml(item.product.name)}</h3>
+          <p>${item.product.description || this.getCategoryDescription(item.product.category)}</p>
+          ${item.product.id ? `<a href="product-details.html?id=${item.product.id}"><span class="SN">Shop Now</span></a>` : '<span class="SN">Coming Soon</span>'}
+        </div>
+      </div>
+    `).join("");
+    
+    this.renderIcons();
+  }
+
+  /* ---------------- GET CATEGORY DESCRIPTION ---------------- */
+  getCategoryDescription(category) {
+    const descriptions = {
+      "Phones": "Latest smartphone with cutting-edge features",
+      "Computers": "Powerful computing for work and play",
+      "SmartWatch": "Track your fitness and stay connected",
+      "Headphones": "Immersive audio experience",
+      "Gaming": "Ultimate gaming gear for enthusiasts",
+      "Cameras": "Capture every moment in stunning detail",
+      "Fashion": "Trendy styles for every occasion",
+      "Furniture": "Modern designs for your home",
+      "Electronics": "Latest tech innovations",
+      "default": "Discover our newest collection"
+    };
+    return descriptions[category] || descriptions.default;
+  }
+
+  /* ---------------- ESCAPE HTML ---------------- */
+  escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /* ---------------- CATEGORIES ---------------- */

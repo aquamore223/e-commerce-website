@@ -24,7 +24,7 @@ window.addEventListener("DOMContentLoaded", () => {
                         <img src="${item.img}" alt="${item.name}">
                         <p>${item.name} <span class="qty-display">x${item.qty}</span></p>
                     </div>
-                    <p>$${subtotal}</p>
+                    <p>$${subtotal.toFixed(2)}</p>
                 </div>
             `;
         }).join("");
@@ -39,7 +39,7 @@ window.addEventListener("DOMContentLoaded", () => {
             ${productHTML}
             <div class="undl-fl">
                 <p>Subtotal:</p>
-                <p>$${subtotal}</p>
+                <p>$${subtotal.toFixed(2)}</p>
             </div>
             <div class="undl-fl">
                 <p>Shipping:</p>
@@ -47,7 +47,7 @@ window.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="pg-flex-sb">
                 <p>Total:</p>
-                <p>$${total}</p>
+                <p>$${total.toFixed(2)}</p>
             </div>
             <div>
                 <input type="radio" name="payment-meth" id="bank">

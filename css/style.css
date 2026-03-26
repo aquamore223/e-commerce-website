@@ -406,8 +406,10 @@ i {
 .scroll-img-section{
     display:flex;
     position: relative;
+    align-items: center;
+    justify-content: center;
     flex-direction: column;
-    width:250px;
+    width:200px;
     height:250px; 
     border-radius:5px;
     overflow: hidden;
@@ -418,7 +420,7 @@ i {
 }
 
 .scroll-img-section img{
-    object-fit:cover;
+    object-fit:contain;
     width:100%;
     height:100%;
 }
@@ -737,7 +739,7 @@ color: white;
     margin:10px;  
 }
 #hero3Header{
-     border-top:solid 1px rgb(247, 241, 241);
+    border-top:solid 1px rgb(247, 241, 241);
     padding:50px 0 0 0;
     margin-top: 30px;
 }
@@ -746,13 +748,15 @@ color: white;
     grid-template-rows: repeat(4, fr) ;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;   
+    max-height:600px;
 }
 .hero3-grid img {
     width:100%;
     height:100%;
-    object-fit: cover;
-    background-color: hsl(30, 4%, 5%);
+    object-fit: contain;
+    transition: transform 0.3s ease;
 }
+
 .hero3-grid-pic1{
      grid-area: 1 / 1 / 5/ 3;
     
@@ -769,25 +773,25 @@ color: white;
      grid-area: 3 /5 / 5 /4;
     
 }
-#hero3-grid-womenPic{
- transform: scaleX(-1);
-}
+ 
 
 #hero3-grid-pic{
     position: relative;
     overflow: hidden;
     border-radius: 5px;
+    box-shadow: 1px 1px 1px grey,-1px -1px grey;
 }
 
 .hero3-layout{
     position: absolute;
     bottom: 20px;
     left: 20px;
+    right: 20px;
     color: white;
-    width:250px;
-    display: flex;
-    flex-direction: column;
-    gap:20px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    padding: 20px;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
 }
 
 .hero3-layout p{
@@ -795,12 +799,17 @@ color: white;
     line-height:18px;
     font-family: Helvetica, sans-serif;
 }
-.hero3-layout a{
-    text-decoration: none;
-    font-weight: bold;
+.hero3-layout .SN {
+    display: inline-block;
+    border-bottom: 2px solid white;
+    padding-bottom: 4px;
+    font-weight: 600;
+    transition: color 0.3s ease;
 }
-.hero3-layout a :hover{
-     color:orangered;
+
+.hero3-layout .SN:hover {
+    color: var(--secondary-color);
+    border-bottom-color: var(--secondary-color);
 }
 .services{
     display: flex;
@@ -2026,7 +2035,9 @@ form p a {
     display: grid;
     grid-template-columns: 10% 50% 40%;
     margin-bottom: 90px;
-    gap:20px;
+    gap:10px;
+    max-height:600px;
+    overflow:hidden;
      
 }
 
@@ -2041,6 +2052,7 @@ form p a {
     cursor: pointer; /* thumbnails are clickable */
     border-radius: 5px;
     overflow: hidden;
+    
 }
 
 .product-img-wrapper img {
@@ -2056,8 +2068,8 @@ form p a {
     flex-direction: column;
     gap: 10px;
     max-height: 500px;  
-    overflow-y: auto;    /* scroll if too many thumbnails */
-    padding-right: 5px;  /* avoid scrollbar overlapping images */
+    overflow-y: auto;    
+    padding-right: 5px;   
 }
 
 /* optional: nice scrollbar for webkit browsers */
@@ -2074,33 +2086,35 @@ form p a {
 .product-hero {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background-color: hsl(15, 6%, 95%);        
-    overflow: hidden; 
+    justify-content: center;        
     border-radius: 5px;
-    overflow: scroll;
+    overflow:auto;
+    width:500px;
+    height:600px;
+     
 }
 
 .product-hero img {
     height: 100%;  
     width: 100%;     
-    object-fit: cover; 
+    object-fit: contain; 
     transition: transform 0.3s ease;
 }
-
+ 
  
 .img-scale {
     transform: scaleX(-1);
 }
 
 .prod-det {
-    margin: 0 0 0 50px;
+     width:400px;
 }
 
 .prod-det-text {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    
 }
 
 .prod-det-text h5 {
@@ -2292,7 +2306,8 @@ form p a {
     .product-details-display {
         display: flex;
         flex-wrap: wrap;
-        gap: 20px;
+        gap: 50px;
+        max-height:100%;
     }
 
     .product-img-wrapper-cont {
@@ -2308,8 +2323,14 @@ form p a {
     }
 
     .product-hero {
-        height: 250px;
+        height: 450px;
     }
+
+    .prod-det{
+        width:100%;
+    }
+
+    
 
     .wish-grid .scroll {
         display: flex;

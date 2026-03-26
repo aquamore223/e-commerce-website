@@ -191,14 +191,29 @@
                                 </div>
                             </div>
                             
+                            <!-- Image Format Selection -->
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label>Image URL *</label>
-                                    <input type="text" id="product-img" placeholder="https://example.com/image.jpg" required>
+                                <div class="form-group full-width">
+                                    <label>Image Format</label>
+                                    <select id="image-format">
+                                        <option value="single">Single Image</option>
+                                        <option value="multiple">Multiple Images (comma-separated URLs)</option>
+                                    </select>
                                 </div>
-                                <div class="form-group">
-                                    <label>Additional Images (JSON)</label>
-                                    <input type="text" id="product-images" placeholder='["url1.jpg", "url2.jpg"]'>
+                            </div>
+                            
+                            <div id="single-image-field" class="form-row">
+                                <div class="form-group full-width">
+                                    <label>Main Image URL *</label>
+                                    <input type="text" id="product-img" placeholder="https://example.com/image.jpg">
+                                </div>
+                            </div>
+                            
+                            <div id="multiple-images-field" class="form-row" style="display: none;">
+                                <div class="form-group full-width">
+                                    <label>Image URLs (comma-separated)</label>
+                                    <input type="text" id="product-additional-images" placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg, https://example.com/img3.jpg">
+                                    <small>Enter image URLs separated by commas. First image will be the main image</small>
                                 </div>
                             </div>
                             
@@ -222,13 +237,21 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Tag</label>
-                                    <select id="product-tag">
-                                        <option value="">None</option>
-                                        <option value="flash">Flash Sale</option>
+                                    <label>Tag Type</label>
+                                    <select id="product-tag-type">
+                                        <option value="none">None</option>
+                                        <option value="flash">Flash Sale (-X%)</option>
                                         <option value="best">Best Selling</option>
                                         <option value="new">New Arrival</option>
                                     </select>
+                                </div>
+                            </div>
+                            
+                            <div id="discount-field" class="form-row" style="display: none;">
+                                <div class="form-group full-width">
+                                    <label>Discount Percentage</label>
+                                    <input type="number" id="product-discount" placeholder="10" step="1" min="1" max="90" value="10">
+                                    <small>Enter discount percentage for flash sale (e.g., 10 for -10%)</small>
                                 </div>
                             </div>
                             
@@ -237,16 +260,21 @@
                                 <textarea id="product-description" rows="4" placeholder="Product description..."></textarea>
                             </div>
                             
+                          <!-- Colors with Images (Simple Format) -->
                             <div class="form-group full-width">
-                                <label>Colors (JSON format)</label>
-                                <input type="text" id="product-colors" placeholder='[{"name":"Red","code":"#ff0000"},{"name":"Blue","code":"#0000ff"}]'>
-                                <small>Format: [{"name":"Color Name","code":"#hexcode"}]</small>
+                                <label>Colors with Images (color: image_url)</label>
+                                <textarea id="product-colors" rows="4" placeholder='red: https://example.com/red-product.jpg
+                            blue: https://example.com/blue-product.jpg
+                            black: https://example.com/black-product.jpg'></textarea>
+                                <small>Format: color_name: image_url (one per line)</small>
+                                <small style="display: block; color: #666; margin-top: 5px;">The image will be shown when user selects this color</small>
                             </div>
-                            
+
+                            <!-- Sizes - Comma Separated -->
                             <div class="form-group full-width">
-                                <label>Sizes (JSON array)</label>
-                                <input type="text" id="product-sizes" placeholder='["XS","S","M","L","XL"]'>
-                                <small>Format: ["Size1","Size2","Size3"]</small>
+                                <label>Sizes (comma-separated)</label>
+                                <input type="text" id="product-sizes" placeholder="XS, S, M, L, XL">
+                                <small>Enter sizes separated by commas</small>
                             </div>
                             
                             <div class="form-actions">
