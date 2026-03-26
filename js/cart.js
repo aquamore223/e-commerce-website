@@ -1,3 +1,4 @@
+// ==================== CART SYSTEM ====================
 class CartSystem {
   constructor() {
     this.cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -47,7 +48,6 @@ class CartSystem {
   }
 
   async addToCart(productId) {
-    // Try to get product from PocketBase first
     let product = null;
     
     if (window.pb) {
@@ -67,7 +67,6 @@ class CartSystem {
       }
     }
     
-    // Fallback to local products object
     if (!product && typeof products !== 'undefined' && products[productId]) {
       product = products[productId];
     }
@@ -144,7 +143,7 @@ class CartSystem {
       return `
         <div class="cart-flex cart-item" data-id="${item.id}">
           <div id="cart-pic-section">
-            <img src="${item.img}" width="50">
+            <img src="${item.img}" width="50" onerror="this.src='/images/placeholder.jpg'">
             <p>${item.name} <span class="cart-qty">x${item.qty}</span></p>
           </div>
           <p>$${itemTotal.toFixed(2)}</p>
@@ -176,6 +175,7 @@ class WishlistSystem {
 
     document.addEventListener("DOMContentLoaded", () => {
       this.updateCount();
+      this.updateAllIcons();
     });
   }
 
@@ -194,15 +194,31 @@ class WishlistSystem {
     }
 
     this.save();
+    this.updateAllIcons();
+    this.updateCount();
+  }
+
+  updateAllIcons() {
+    document.querySelectorAll(".heart-icon, .prod-like").forEach(container => {
+      const productId = container.dataset.id;
+      if (!productId) return;
+      
+      const icon = container.querySelector("i");
+      if (icon) {
+        if (this.isWishlisted(productId)) {
+          icon.classList.add("filled");
+        } else {
+          icon.classList.remove("filled");
+        }
+      }
+    });
   }
 
   async getProductDetails(productId) {
-    // Try local products first
     if (typeof products !== "undefined" && products[productId]) {
       return products[productId];
     }
 
-    // Try PocketBase
     if (window.pb) {
       try {
         const pbProduct = await window.pb.collection("exclusive_ecommerce").getOne(productId);
@@ -219,7 +235,6 @@ class WishlistSystem {
       }
     }
 
-    // Try DOM
     const productCard = document.querySelector(`[data-product-id="${productId}"]`);
     if (productCard) {
       return {
@@ -284,7 +299,24 @@ class ViewedSystem {
     if (!this.items.includes(productId)) {
       this.items.push(productId);
       this.save();
+      this.updateAllEyeIcons();
     }
+  }
+
+  updateAllEyeIcons() {
+    document.querySelectorAll(".eye-icon").forEach(container => {
+      const productId = container.dataset.id;
+      if (!productId) return;
+      
+      const icon = container.querySelector("i");
+      if (icon) {
+        if (this.isViewed(productId)) {
+          icon.classList.add("viewed");
+        } else {
+          icon.classList.remove("viewed");
+        }
+      }
+    });
   }
 
   save() {
@@ -304,54 +336,64 @@ window.viewedSystem = new ViewedSystem();
 
 /* ---------------- GLOBAL CLICK EVENTS ---------------- */
 document.addEventListener("click", (e) => {
-  /* WISHLIST */
-  const heart = e.target.closest(".heart-icon");
+  // Wishlist heart click
+  const heart = e.target.closest(".heart-icon, .prod-like");
   if (heart) {
+    e.preventDefault();
     const productId = heart.dataset.id;
     if (!productId) return;
 
-    wishlistSystem.toggle(productId);
-
+    // Update icon immediately for visual feedback
     const icon = heart.querySelector("i");
     if (icon) {
-      icon.classList.toggle("filled", wishlistSystem.isWishlisted(productId));
+      const willBeWishlisted = !window.wishlistSystem?.isWishlisted(productId);
+      if (willBeWishlisted) {
+        icon.classList.add("filled");
+      } else {
+        icon.classList.remove("filled");
+      }
     }
+
+    window.wishlistSystem?.toggle(productId);
+    return;
   }
 
-  /* VIEWED */
-  const container = e.target.closest(".scroll-img-section");
-  if (container) {
-    const productId = container.dataset.id;
+  // Viewed eye click
+  const eye = e.target.closest(".eye-icon");
+  if (eye) {
+    e.preventDefault();
+    const productId = eye.dataset.id;
     if (!productId) return;
 
-    viewedSystem.markViewed(productId);
-
-    const eyeIcon = container.querySelector(".eye-icon i");
-    if (eyeIcon) {
-      eyeIcon.classList.add("viewed");
+    const icon = eye.querySelector("i");
+    if (icon) {
+      icon.classList.add("viewed");
     }
+
+    window.viewedSystem?.markViewed(productId);
+    return;
   }
 });
 
-/* ---------------- LOAD ICON STATES ---------------- */
+/* ---------------- LOAD ICON STATES ON PAGE LOAD ---------------- */
 document.addEventListener("DOMContentLoaded", () => {
-  /* HEART STATE */
-  document.querySelectorAll(".heart-icon").forEach((heart) => {
+  // Update hearts
+  document.querySelectorAll(".heart-icon, .prod-like").forEach((heart) => {
     const productId = heart.dataset.id;
     const icon = heart.querySelector("i");
-
-    if (icon && wishlistSystem.isWishlisted(productId)) {
+    if (icon && window.wishlistSystem?.isWishlisted(productId)) {
       icon.classList.add("filled");
     }
   });
 
-  /* VIEWED STATE */
-  document.querySelectorAll(".scroll-img-section").forEach((container) => {
-    const productId = container.dataset.id;
-    const eyeIcon = container.querySelector(".eye-icon i");
-
-    if (eyeIcon && viewedSystem.isViewed(productId)) {
-      eyeIcon.classList.add("viewed");
+  // Update eyes
+  document.querySelectorAll(".eye-icon").forEach((eye) => {
+    const productId = eye.dataset.id;
+    const icon = eye.querySelector("i");
+    if (icon && window.viewedSystem?.isViewed(productId)) {
+      icon.classList.add("viewed");
     }
   });
 });
+
+console.log("✅ Cart.js loaded successfully");

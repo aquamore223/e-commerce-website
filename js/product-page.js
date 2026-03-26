@@ -10,7 +10,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     const product = formatPBProduct(productPB);
     console.log("Product loaded:", product);
-    console.log("Additional images:", product.additionalImages);
 
     // ---------------- BREADCRUMB ----------------
     const breadcrumb = document.getElementById("disp-hd");
@@ -28,17 +27,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (smallImgContainer) {
       smallImgContainer.innerHTML = "";
 
-      // Create array of all images: main image + additional images
       let allImages = [product.img];
-      
-      // Add additional images if they exist
       if (product.additionalImages && product.additionalImages.length > 0) {
         allImages = [...allImages, ...product.additionalImages];
       }
       
       console.log("Total images to show:", allImages.length);
 
-      // Create thumbnails for all images
       allImages.forEach((img, index) => {
         const div = document.createElement("div");
         div.classList.add("product-img-wrapper");
@@ -48,7 +43,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         imgElement.alt = `${product.name} - view ${index + 1}`;
         imgElement.classList.add("img-scale");
         
-        // Highlight the first thumbnail (which is the main image)
         if (index === 0) {
           imgElement.style.border = "2px solid #db4444";
           imgElement.style.padding = "2px";
@@ -57,7 +51,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         imgElement.addEventListener("click", () => {
           if (heroImg) {
             heroImg.src = img;
-            // Update active thumbnail styling
             document.querySelectorAll(".product-img-wrapper img").forEach(thumb => {
               thumb.style.border = "none";
               thumb.style.padding = "0";
@@ -180,10 +173,71 @@ window.addEventListener("DOMContentLoaded", async () => {
       addToCartBtn.dataset.id = product.id;
     }
 
-    // ---------------- HEART ICON ----------------
-    const heartIcon = document.querySelector(".prod-like");
-    if (heartIcon) {
-      heartIcon.dataset.id = product.id;
+    // ================ HEART ICON (WISHLIST) - FIXED ================
+    const heartIconContainer = document.querySelector(".prod-like");
+    if (heartIconContainer) {
+      // Set the product ID
+      heartIconContainer.dataset.id = product.id;
+      
+      // Find the existing heart icon (don't create a new one)
+      let heartIcon = heartIconContainer.querySelector("i");
+      
+      // If no icon exists, create one (but this shouldn't happen if HTML is correct)
+      if (!heartIcon) {
+        heartIcon = document.createElement("i");
+        heartIcon.setAttribute("data-lucide", "heart");
+        heartIconContainer.appendChild(heartIcon);
+      }
+      
+      // Set initial heart state based on wishlist
+      if (window.wishlistSystem) {
+        const isWishlisted = window.wishlistSystem.isWishlisted(product.id);
+        if (isWishlisted) {
+          heartIcon.classList.add("filled");
+        } else {
+          heartIcon.classList.remove("filled");
+        }
+      }
+      
+      // Remove existing click listeners and add new one
+      const newHeartContainer = heartIconContainer.cloneNode(true);
+      heartIconContainer.parentNode.replaceChild(newHeartContainer, heartIconContainer);
+      
+      // Add click handler for wishlist
+      newHeartContainer.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const pid = newHeartContainer.dataset.id;
+        if (!pid) return;
+        
+        if (window.wishlistSystem) {
+          // Toggle wishlist
+          window.wishlistSystem.toggle(pid);
+          
+          // Update the heart icon
+          const icon = newHeartContainer.querySelector("i");
+          if (icon) {
+            if (window.wishlistSystem.isWishlisted(pid)) {
+              icon.classList.add("filled");
+              showNotification("Added to wishlist", "success");
+            } else {
+              icon.classList.remove("filled");
+              showNotification("Removed from wishlist", "info");
+            }
+          }
+          
+          // Update wishlist count in header
+          if (window.wishlistSystem.updateCount) {
+            window.wishlistSystem.updateCount();
+          }
+          
+          // Dispatch event for other components
+          document.dispatchEvent(new CustomEvent('wishlistUpdated', { 
+            detail: window.wishlistSystem.items 
+          }));
+        }
+      });
     }
 
     // ---------------- RELATED PRODUCTS ----------------
@@ -215,8 +269,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         } else {
           relatedProducts.forEach(p => {
             const related = formatPBProduct(p);
+            const isWishlisted = window.wishlistSystem?.isWishlisted(related.id) || false;
+            const isViewed = window.viewedSystem?.isViewed(related.id) || false;
+            
             const div = document.createElement("div");
             div.classList.add("scroll");
+            div.setAttribute("data-product-id", related.id);
             div.innerHTML = `
               <div class="scroll-img-section">
                 <a href="product-details.html?id=${related.id}">
@@ -225,10 +283,10 @@ window.addEventListener("DOMContentLoaded", async () => {
                 </a>
                 <div class="scroll-icon">
                   <span class="heart-icon" data-id="${related.id}">
-                    <i data-lucide="heart"></i>
+                    <i data-lucide="heart" class="${isWishlisted ? 'filled' : ''}"></i>
                   </span>
                   <span class="eye-icon" data-id="${related.id}">
-                    <i data-lucide="eye"></i>
+                    <i data-lucide="eye" class="${isViewed ? 'viewed' : ''}"></i>
                   </span>
                 </div>
                 <button class="add-to-cart-btn" data-id="${related.id}">Add To Cart</button>
@@ -249,6 +307,9 @@ window.addEventListener("DOMContentLoaded", async () => {
             `;
             productsGrid.appendChild(div);
           });
+          
+          // Add event listeners for related products
+          addRelatedProductEventListeners();
         }
       } catch (relatedError) {
         console.error("Error loading related products:", relatedError);
@@ -260,14 +321,164 @@ window.addEventListener("DOMContentLoaded", async () => {
       setTimeout(() => lucide.createIcons(), 100);
     }
 
+    // Mark product as viewed
+    if (window.viewedSystem) {
+      window.viewedSystem.markViewed(product.id);
+    }
+
   } catch (err) {
     console.error("Error loading product page:", err);
   }
 });
 
+// Function to add event listeners to related products
+function addRelatedProductEventListeners() {
+  // Wishlist hearts for related products
+  document.querySelectorAll(".related-products-grid .heart-icon").forEach(heart => {
+    heart.removeEventListener("click", handleRelatedHeartClick);
+    heart.addEventListener("click", handleRelatedHeartClick);
+  });
+  
+  // Viewed eyes for related products
+  document.querySelectorAll(".related-products-grid .eye-icon").forEach(eye => {
+    eye.removeEventListener("click", handleRelatedEyeClick);
+    eye.addEventListener("click", handleRelatedEyeClick);
+  });
+}
+
+function handleRelatedHeartClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const heart = e.currentTarget;
+  const productId = heart.dataset.id;
+  if (!productId) return;
+  
+  if (window.wishlistSystem) {
+    window.wishlistSystem.toggle(productId);
+    
+    // Update the heart icon
+    const icon = heart.querySelector("i");
+    if (icon) {
+      if (window.wishlistSystem.isWishlisted(productId)) {
+        icon.classList.add("filled");
+        showNotification("Added to wishlist", "success");
+      } else {
+        icon.classList.remove("filled");
+        showNotification("Removed from wishlist", "info");
+      }
+    }
+    
+    // Update wishlist count in header
+    if (window.wishlistSystem.updateCount) {
+      window.wishlistSystem.updateCount();
+    }
+    
+    // Dispatch event for other components
+    document.dispatchEvent(new CustomEvent('wishlistUpdated', { 
+      detail: window.wishlistSystem.items 
+    }));
+  }
+}
+
+function handleRelatedEyeClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const eye = e.currentTarget;
+  const productId = eye.dataset.id;
+  if (!productId) return;
+  
+  if (window.viewedSystem) {
+    window.viewedSystem.markViewed(productId);
+    
+    // Update the eye icon
+    const icon = eye.querySelector("i");
+    if (icon) {
+      icon.classList.add("viewed");
+    }
+    
+    // Dispatch event for other components
+    document.dispatchEvent(new CustomEvent('viewedUpdated', { 
+      detail: window.viewedSystem.items 
+    }));
+  }
+}
+
+// Listen for wishlist updates from other pages
+document.addEventListener('wishlistUpdated', () => {
+  // Update main product heart
+  const heartContainer = document.querySelector(".prod-like");
+  if (heartContainer && window.wishlistSystem) {
+    const productId = heartContainer.dataset.id;
+    const icon = heartContainer.querySelector("i");
+    if (productId && icon) {
+      if (window.wishlistSystem.isWishlisted(productId)) {
+        icon.classList.add("filled");
+      } else {
+        icon.classList.remove("filled");
+      }
+    }
+  }
+  
+  // Update all related product hearts
+  document.querySelectorAll(".related-products-grid .heart-icon").forEach(heart => {
+    const productId = heart.dataset.id;
+    const icon = heart.querySelector("i");
+    if (icon && window.wishlistSystem) {
+      if (window.wishlistSystem.isWishlisted(productId)) {
+        icon.classList.add("filled");
+      } else {
+        icon.classList.remove("filled");
+      }
+    }
+  });
+});
+
+// Listen for viewed updates
+document.addEventListener('viewedUpdated', () => {
+  // Update all related product eyes
+  document.querySelectorAll(".related-products-grid .eye-icon").forEach(eye => {
+    const productId = eye.dataset.id;
+    const icon = eye.querySelector("i");
+    if (icon && window.viewedSystem) {
+      if (window.viewedSystem.isViewed(productId)) {
+        icon.classList.add("viewed");
+      }
+    }
+  });
+});
+
+// Helper function for notifications
+function showNotification(message, type) {
+  // Remove existing notification
+  const existing = document.querySelector('.product-notification');
+  if (existing) existing.remove();
+  
+  const notification = document.createElement('div');
+  notification.className = 'product-notification';
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#4CAF50' : '#db4444'};
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  `;
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
+}
+
 // ---------------- FORMAT PB PRODUCT ----------------
 function formatPBProduct(p) {
-  // Handle main image (keep your existing logic)
   let mainImage = '/images/placeholder.jpg';
   
   if (p.image) {
@@ -278,21 +489,16 @@ function formatPBProduct(p) {
     }
   }
   
-  // Fix relative paths for main image
   if (mainImage && mainImage.startsWith("/") && !mainImage.startsWith("http")) {
     mainImage = window.location.origin + mainImage;
   }
 
-  // Handle additional images (new field)
   let additionalImages = [];
-  
   if (p.additional_images) {
     if (Array.isArray(p.additional_images)) {
-      // If it's already an array
       additionalImages = p.additional_images;
     } else if (typeof p.additional_images === 'string') {
       try {
-        // Try to parse as JSON
         const parsed = JSON.parse(p.additional_images);
         if (Array.isArray(parsed)) {
           additionalImages = parsed;
@@ -300,13 +506,11 @@ function formatPBProduct(p) {
           additionalImages = [p.additional_images];
         }
       } catch (e) {
-        // Not JSON, treat as single URL
         additionalImages = [p.additional_images];
       }
     }
   }
   
-  // Fix relative paths for additional images
   additionalImages = additionalImages.map(img => {
     if (img && img.startsWith("/") && !img.startsWith("http")) {
       return window.location.origin + img;
@@ -314,7 +518,6 @@ function formatPBProduct(p) {
     return img;
   });
 
-  // Handle colors
   let colorsArray = [];
   if (p.colors) {
     if (Array.isArray(p.colors)) {
@@ -328,7 +531,6 @@ function formatPBProduct(p) {
     }
   }
   
-  // Handle sizes
   let sizesArray = [];
   if (p.sizes) {
     if (Array.isArray(p.sizes)) {
@@ -349,7 +551,7 @@ function formatPBProduct(p) {
     oldPrice: p.oldPrice ? (typeof p.oldPrice === 'number' ? p.oldPrice : parseFloat(p.oldPrice)) : null,
     category: p.category || "Uncategorized",
     img: mainImage,
-    additionalImages: additionalImages, // New field for side images
+    additionalImages: additionalImages,
     description: p.description || "No description available",
     rating: p.rating || 4,
     reviews: p.reviews || 0,

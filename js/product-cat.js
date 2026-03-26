@@ -5,6 +5,19 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.wishlistSystem?.updateCount) {
     wishlistSystem.updateCount();
   }
+  
+  // Listen for wishlist updates from other pages
+  document.addEventListener('wishlistUpdated', () => {
+    applyIconStates();
+    if (window.wishlistSystem?.updateCount) {
+      wishlistSystem.updateCount();
+    }
+  });
+  
+  // Listen for viewed updates
+  document.addEventListener('viewedUpdated', () => {
+    applyIconStates();
+  });
 });
 
 // Pagination variables
@@ -47,7 +60,8 @@ async function loadCategoryProducts() {
 
     if (allFilteredProducts.length === 0) {
       container.innerHTML = "<p>No products found</p>";
-      document.getElementById("pagination").style.display = "none";
+      const paginationEl = document.getElementById("pagination");
+      if (paginationEl) paginationEl.style.display = "none";
       return;
     }
 
@@ -83,7 +97,11 @@ function renderProductsPage() {
     .join("");
 
   if (window.lucide) lucide.createIcons();
-  applyIconStates();
+  
+  // Apply icon states after rendering
+  setTimeout(() => {
+    applyIconStates();
+  }, 50);
 }
 
 /* ---------------- SETUP PAGINATION CONTROLS ---------------- */
@@ -283,6 +301,10 @@ function getTag(product) {
 function productCard(product) {
   const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";
   const tag = getTag(product);
+  
+  // Check states at render time
+  const isWishlisted = window.wishlistSystem?.isWishlisted(product.id) || false;
+  const isViewed = window.viewedSystem?.isViewed(product.id) || false;
 
   return `
   <div class="scroll" data-product-id="${product.id}">
@@ -293,10 +315,10 @@ function productCard(product) {
       ${tag ? `<span class="scroll-tag ${product.flashSale ? 'flash-tag' : 'best-tag'}">${tag}</span>` : ""}
       <div class="scroll-icon">
         <span class="heart-icon" data-id="${product.id}">
-          <i data-lucide="heart"></i>
+          <i data-lucide="heart" class="${isWishlisted ? 'filled' : ''}"></i>
         </span>
         <span class="eye-icon" data-id="${product.id}">
-          <i data-lucide="eye"></i>
+          <i data-lucide="eye" class="${isViewed ? 'viewed' : ''}"></i>
         </span>
       </div>
       <button class="add-to-cart-btn" data-id="${product.id}">
@@ -337,26 +359,99 @@ function stars(rating = 0) {
 
 /* ---------------- APPLY ICON STATES ---------------- */
 function applyIconStates() {
-  // ❤️ wishlist state
+  console.log("Applying icon states for category page");
+  
+  // ❤️ wishlist state - update all hearts
   document.querySelectorAll(".heart-icon").forEach((heart) => {
     const id = heart.dataset.id;
     const icon = heart.querySelector("i");
-
-    if (icon && window.wishlistSystem?.isWishlisted(id)) {
-      icon.classList.add("filled");
+    
+    if (icon && window.wishlistSystem) {
+      const isWishlisted = window.wishlistSystem.isWishlisted(id);
+      if (isWishlisted) {
+        icon.classList.add("filled");
+      } else {
+        icon.classList.remove("filled");
+      }
     }
   });
 
-  // 👁 viewed state
+  // 👁 viewed state - update all eyes
   document.querySelectorAll(".scroll").forEach((card) => {
     const id = card.dataset.productId;
     const eyeIcon = card.querySelector(".eye-icon i");
-
-    if (eyeIcon && window.viewedSystem?.isViewed(id)) {
-      eyeIcon.classList.add("viewed");
+    
+    if (eyeIcon && window.viewedSystem) {
+      const isViewed = window.viewedSystem.isViewed(id);
+      if (isViewed) {
+        eyeIcon.classList.add("viewed");
+      } else {
+        eyeIcon.classList.remove("viewed");
+      }
     }
   });
 }
+
+// Add global click handler for hearts on category page
+document.addEventListener("click", (e) => {
+  // Wishlist heart click
+  const heart = e.target.closest(".heart-icon");
+  if (heart) {
+    e.preventDefault();
+    const productId = heart.dataset.id;
+    if (!productId) return;
+    
+    if (window.wishlistSystem) {
+      window.wishlistSystem.toggle(productId);
+      
+      // Update the heart icon immediately
+      const icon = heart.querySelector("i");
+      if (icon) {
+        const isWishlisted = window.wishlistSystem.isWishlisted(productId);
+        if (isWishlisted) {
+          icon.classList.add("filled");
+        } else {
+          icon.classList.remove("filled");
+        }
+      }
+      
+      // Update wishlist count in header
+      if (window.wishlistSystem.updateCount) {
+        window.wishlistSystem.updateCount();
+      }
+      
+      // Dispatch event for other components
+      document.dispatchEvent(new CustomEvent('wishlistUpdated', { 
+        detail: window.wishlistSystem.items 
+      }));
+    }
+    return;
+  }
+  
+  // Viewed eye click
+  const eye = e.target.closest(".eye-icon");
+  if (eye) {
+    e.preventDefault();
+    const productId = eye.dataset.id;
+    if (!productId) return;
+    
+    if (window.viewedSystem) {
+      window.viewedSystem.markViewed(productId);
+      
+      // Update the eye icon immediately
+      const icon = eye.querySelector("i");
+      if (icon) {
+        icon.classList.add("viewed");
+      }
+      
+      // Dispatch event for other components
+      document.dispatchEvent(new CustomEvent('viewedUpdated', { 
+        detail: window.viewedSystem.items 
+      }));
+    }
+    return;
+  }
+});
 
 // Export for debugging
 window.productCategory = {
@@ -365,5 +460,6 @@ window.productCategory = {
     currentPage = page;
     renderProductsPage();
     setupPagination();
-  }
+  },
+  refreshIcons: applyIconStates
 };

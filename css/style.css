@@ -1450,6 +1450,7 @@ form p a {
     display: flex;
     flex-direction: column;
     gap:20px;
+    
 }
 .cart-flex{
     display:flex;
@@ -1458,16 +1459,22 @@ form p a {
     padding:10px;
     align-items: center;
     border-radius: 5px;
-    justify-items: center;
+    justify-items: center; 
 }
 .cart-flex img{
     width:50px;
+}
+
+#cart-items{
+     max-height: 600px;
+     overflow: auto;
 }
  
 .cart-product{
     display: flex;
     align-items: center;
     justify-content: center;
+    
 }
 .remove-item{
      font-size:20px;
@@ -1601,15 +1608,90 @@ form p a {
     display: flex;
     flex-direction: column;
     gap:10px;
+    margin-top: 60px;
 }
 
 .pg-flex-sb-ai{
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: space-between;   
     flex-wrap: wrap;
     
 }
+
+.cart-products-scroll {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-summary{
+     display: flex;
+     flex-direction: column;
+     gap:10px;
+     margin-bottom: 50px;
+}
+.cart-products-scroll .cart-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.3s;
+}
+/* Payment Methods */
+.payment-methods {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.payment-methods div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.payment-methods input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.payment-methods label {
+    cursor: pointer;
+    color: #333;
+}
+
+/* Coupon Section */
+.coupon-section {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.coupon-section input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.coupon-section input:focus {
+    border-color: #db4444;
+}
+
+.coupon-section button {
+    padding: 12px 24px;
+    white-space: nowrap;
+}
+
  @media (max-width:720px) {
     .chkout-main{
       margin: 20px 20px;  
