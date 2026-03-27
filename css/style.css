@@ -256,6 +256,7 @@ i {
 .slide-wrapper {
     width: 100%;
     max-width: 100%;
+    height:100%;
     position: relative;
     overflow: hidden;
 }
@@ -263,15 +264,13 @@ i {
     display: flex;
     width: 100%;
     transition: transform 0.5s ease-in-out;
+    padding-bottom: 10px;
 }
 .slides {
     display: flex;
-    min-width: 100%;
-    justify-content: space-between;
-    padding: 0;
-    overflow: hidden;
-    
-    
+    min-width: 100%; 
+    padding:0;
+    max-height:200px;   
 }
 .slides span {
     font-size: 50px;
@@ -281,13 +280,15 @@ i {
 .slides h1 {
     padding: 5px 0;
 }
- 
+ .bg-div{
+    margin: auto;
+    max-width: 50%;
+ }
 .bg-div img {
     width: 100%;
-    height: 250px;
-    object-fit: cover;
-    padding:10px;
-    
+    height: 100%;
+    object-fit: contain;
+     
 }
 
 .slider-nav {
@@ -295,21 +296,13 @@ i {
   column-gap: 1rem;
   position:absolute;
   align-self: center;
-  bottom :10px;
+  bottom :0px;
   left: 50%;
   transform: translateX(-50%);
 }
 
 /* Slider Loading State */
-.loading-slides {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 300px;
-    background: #f5f5f5;
-    color: #666;
-}
-
+ 
 .slides {
     display: none;
 }
@@ -330,7 +323,6 @@ i {
   width:10px;
   height: 10px;
   border-radius:50%;
- 
 }
 .prev, .next {
     position: absolute;
@@ -362,7 +354,7 @@ i {
     padding: 5px 0 ;
     display: flex;
     align-items: center;
-    gap: 20px;
+    
 }
 #first-content {
     padding: 30px 150px ;
@@ -1237,6 +1229,7 @@ color: white;
     .slides{
         flex-wrap: wrap;
         flex-direction: column-reverse;
+        max-height:500px;
     }
     .hero-section{
         padding: 30px 5px;
@@ -1252,6 +1245,7 @@ color: white;
     .overlay  h1  span {
          font-size:25px;
          width:350px;
+
     }
 
     .first-product-scroll{
