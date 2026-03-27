@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     wishlistSystem.updateCount();
   }
   
-  // Listen for wishlist updates from other pages
+  // Listen for wishlist updates from other pages/components
   document.addEventListener('wishlistUpdated', () => {
     applyIconStates();
     if (window.wishlistSystem?.updateCount) {
@@ -377,81 +377,23 @@ function applyIconStates() {
   });
 
   // 👁 viewed state - update all eyes
-  document.querySelectorAll(".scroll").forEach((card) => {
-    const id = card.dataset.productId;
-    const eyeIcon = card.querySelector(".eye-icon i");
+  document.querySelectorAll(".eye-icon").forEach((eye) => {
+    const id = eye.dataset.id;
+    const icon = eye.querySelector("i");
     
-    if (eyeIcon && window.viewedSystem) {
+    if (icon && window.viewedSystem) {
       const isViewed = window.viewedSystem.isViewed(id);
       if (isViewed) {
-        eyeIcon.classList.add("viewed");
+        icon.classList.add("viewed");
       } else {
-        eyeIcon.classList.remove("viewed");
+        icon.classList.remove("viewed");
       }
     }
   });
 }
 
-// Add global click handler for hearts on category page
-document.addEventListener("click", (e) => {
-  // Wishlist heart click
-  const heart = e.target.closest(".heart-icon");
-  if (heart) {
-    e.preventDefault();
-    const productId = heart.dataset.id;
-    if (!productId) return;
-    
-    if (window.wishlistSystem) {
-      window.wishlistSystem.toggle(productId);
-      
-      // Update the heart icon immediately
-      const icon = heart.querySelector("i");
-      if (icon) {
-        const isWishlisted = window.wishlistSystem.isWishlisted(productId);
-        if (isWishlisted) {
-          icon.classList.add("filled");
-        } else {
-          icon.classList.remove("filled");
-        }
-      }
-      
-      // Update wishlist count in header
-      if (window.wishlistSystem.updateCount) {
-        window.wishlistSystem.updateCount();
-      }
-      
-      // Dispatch event for other components
-      document.dispatchEvent(new CustomEvent('wishlistUpdated', { 
-        detail: window.wishlistSystem.items 
-      }));
-    }
-    return;
-  }
-  
-  // Viewed eye click
-  const eye = e.target.closest(".eye-icon");
-  if (eye) {
-    e.preventDefault();
-    const productId = eye.dataset.id;
-    if (!productId) return;
-    
-    if (window.viewedSystem) {
-      window.viewedSystem.markViewed(productId);
-      
-      // Update the eye icon immediately
-      const icon = eye.querySelector("i");
-      if (icon) {
-        icon.classList.add("viewed");
-      }
-      
-      // Dispatch event for other components
-      document.dispatchEvent(new CustomEvent('viewedUpdated', { 
-        detail: window.viewedSystem.items 
-      }));
-    }
-    return;
-  }
-});
+// REMOVE THE DUPLICATE CLICK HANDLER - Let cart.js handle all clicks
+// The cart.js global click handler will handle heart clicks
 
 // Export for debugging
 window.productCategory = {

@@ -1202,11 +1202,14 @@ color: white;
         display: flex;
         flex-direction: column;
         padding: 20px;
+        
     }
      .nav  .bx-menu{
       display: flex;
     }
-    
+    .user-icon ul{
+    right: 20px;
+}
     .slides{
         flex-wrap: wrap;
         flex-direction: column-reverse;
@@ -1224,6 +1227,7 @@ color: white;
     }
     .overlay  h1  span {
          font-size:25px;
+         width:350px;
     }
 
     .first-product-scroll{
