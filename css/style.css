@@ -581,7 +581,7 @@ color: white;
 
 .scroller{
     display: flex;
-    gap: 20px;
+    gap:20px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-behavior: smooth;
@@ -1295,20 +1295,17 @@ color: white;
 
 @media (max-width :450px) {
 
-    .scroll-img-section{
-    display:flex;
-    position: relative;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    width:100px;
-    height:150px; 
-    border-radius:5px;
-    overflow: hidden;
-    transition: transform 0.25s ease;
+     .scroller{
+    display: flex;
+    gap:5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
 }
     
-}
+
 
                    /* log pages_*/
 
