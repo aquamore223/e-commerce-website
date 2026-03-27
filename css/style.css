@@ -300,6 +300,30 @@ i {
   transform: translateX(-50%);
 }
 
+/* Slider Loading State */
+.loading-slides {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    background: #f5f5f5;
+    color: #666;
+}
+
+.slides {
+    display: none;
+}
+
+.slides.active {
+    display: flex;
+}
+
+ 
+
+.slides {
+    transition: opacity 0.5s ease;
+}
+
 
 .slider-nav-btn{
   background-color: #bdb3b2;

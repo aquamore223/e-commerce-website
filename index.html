@@ -25,115 +25,39 @@
     </header>
 
     <!-- Hero Section with Slider -->
-    <div class="hero-section">
-        <div class="exclusive-text">
-            <ul>
-                <li><a href="#">Woman's Fashion</a><i data-lucide="chevron-right" class="chev-icon"></i></li>
-                <li><a href="#">Men's Fashion</a> <i data-lucide="chevron-right" class="chev-icon"></i></li>
-                <li><a href="#">Electronics</a></li>
-                <li><a href="#">Home & Lifestyle</a></li>
-                <li><a href="#">Medicine</a></li>
-                <li><a href="#">Sports & Outdoor</a></li>
-                <li><a href="#">Baby's & Toys</a></li>
-                <li><a href="#">Groceries & Pets</a></li>
-                <li><a href="#">Health & Beauty</a></li>
-            </ul>
-        </div>
-
-        <section class="container">
-            <div class="slide-wrapper">
-                <div class="slider">
-                    <!-- Slide 1 -->
-                    <div id="slide1" class="slides active">
-                        <div class="overlay">   
-                            <p>
-                                <img src="images/1200px-Apple_gray_logo 1.png" alt="Apple Logo" class="top-img">
-                                iPhone 14 Series
-                            </p>
-                            <h1><span>Up to 10%</span> <span>off Voucher</span></h1>
-                            <a href="#" class="SN">Shop Now <i data-lucide="arrow-right"></i></a>
-                        </div>
-                        <div class="bg-div">
-                            <img src="images/slider-pic1.jpg" alt="iPhone 14" class="bg-image">
-                        </div>
-                    </div>
-
-                    <!-- Slide 2 -->
-                    <div id="slide2" class="slides">
-                        <div class="overlay">   
-                            <p>
-                                <img src="images/1200px-Apple_gray_logo 1.png" alt="Apple Logo" class="top-img">
-                                iPhone 14 Series
-                            </p>
-                            <h1><span>Up to 10%</span> <span>off Voucher</span></h1>
-                            <a href="#" class="SN">Shop Now <i data-lucide="arrow-right"></i></a>
-                        </div>
-                        <div class="bg-div">
-                            <img src="images/slider-pic2.webp" alt="iPhone" class="bg-image">
-                        </div>
-                    </div>
-
-                    <!-- Slide 3 -->
-                    <div id="slide3" class="slides">
-                        <div class="overlay">   
-                            <p>
-                                <img src="images/1200px-Apple_gray_logo 1.png" alt="Apple Logo" class="top-img">
-                                iPhone 14 Series
-                            </p>
-                            <h1><span>Up to 10%</span> <span>off Voucher</span></h1>
-                            <a href="#" class="SN">Shop Now <i data-lucide="arrow-right"></i></a>
-                        </div>
-                        <div class="bg-div">
-                            <img src="images/New-Mercedes-Benz-Gtr-Licensed-Ride-on-Car-Kids-Electric-Toy-Car 1.png" alt="Toy Car" class="bg-image">
-                        </div>
-                    </div>
-
-                    <!-- Slide 4 -->
-                    <div id="slide4" class="slides">
-                        <div class="overlay">   
-                            <p>
-                                <img src="images/1200px-Apple_gray_logo 1.png" alt="Apple Logo" class="top-img">
-                                iPhone 14 Series
-                            </p>
-                            <h1><span>Up to 10%</span> <span>off Voucher</span></h1>
-                            <a href="#" class="SN">Shop Now <i data-lucide="arrow-right"></i></a>
-                        </div>
-                        <div class="bg-div">
-                            <img src="images/image 57.png" alt="Product" class="bg-image">
-                        </div>
-                    </div>
-
-                    <!-- Slide 5 -->
-                    <div id="slide5" class="slides">
-                        <div class="overlay">   
-                            <p>
-                                <img src="images/1200px-Apple_gray_logo 1.png" alt="Apple Logo" class="top-img">
-                                iPhone 14 Series
-                            </p>
-                            <h1><span>Up to 10%</span> <span>off Voucher</span></h1>
-                            <a href="#" class="SN">Shop Now <i data-lucide="arrow-right"></i></a>
-                        </div>
-                        <div class="bg-div">
-                            <img src="images/547953_9C2ST_8746_001_082_0000_Light-Gucci-Savoy-medium-duffle-bag 1.png" alt="Gucci Bag" class="bg-image">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slider Controls -->
-                <button class="prev">&#10094;</button>
-                <button class="next">&#10095;</button>
-
-                <!-- Slider Navigation -->
-                <div class="slider-nav"> 
-                    <a href="#slide1" class="slider-nav-btn active"></a>
-                    <a href="#slide2" class="slider-nav-btn"></a>
-                    <a href="#slide3" class="slider-nav-btn"></a>
-                    <a href="#slide4" class="slider-nav-btn"></a>
-                    <a href="#slide5" class="slider-nav-btn"></a>
-                </div>
-            </div>                       
-        </section>
+   <div class="hero-section">
+    <div class="exclusive-text">
+        <ul>
+            <li><a href="#">Woman's Fashion</a><i data-lucide="chevron-right" class="chev-icon"></i></li>
+            <li><a href="#">Men's Fashion</a> <i data-lucide="chevron-right" class="chev-icon"></i></li>
+            <li><a href="#">Electronics</a></li>
+            <li><a href="#">Home & Lifestyle</a></li>
+            <li><a href="#">Medicine</a></li>
+            <li><a href="#">Sports & Outdoor</a></li>
+            <li><a href="#">Baby's & Toys</a></li>
+            <li><a href="#">Groceries & Pets</a></li>
+            <li><a href="#">Health & Beauty</a></li>
+        </ul>
     </div>
+
+    <section class="container">
+        <div class="slide-wrapper">
+            <div class="slider">
+                <!-- Slides will be loaded dynamically -->
+                <div class="loading-slides">Loading slides...</div>
+            </div>
+
+            <!-- Slider Controls -->
+            <button class="prev">&#10094;</button>
+            <button class="next">&#10095;</button>
+
+            <!-- Slider Navigation Dots -->
+            <div class="slider-nav">
+                <!-- Dots will be loaded dynamically -->
+            </div>
+        </div>                       
+    </section>
+</div>
 
     <!-- Main Content Area -->
     <div class="main">

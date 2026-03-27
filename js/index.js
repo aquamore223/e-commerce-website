@@ -301,6 +301,277 @@ window.addEventListener("load", () => {
     }, 500);
 });
 
+
+// ==================== DYNAMIC SLIDER ====================
+
+class DynamicSlider {
+    constructor() {
+        this.slides = [];
+        this.currentIndex = 0;
+        this.autoPlayInterval = null;
+        this.autoPlayDelay = 5000; // 5 seconds
+        
+        this.sliderContainer = document.querySelector('.slider');
+        this.sliderNav = document.querySelector('.slider-nav');
+        this.prevBtn = document.querySelector('.prev');
+        this.nextBtn = document.querySelector('.next');
+        
+        this.init();
+    }
+    
+    async init() {
+        await this.loadSlides();
+        if (this.slides.length > 0) {
+            this.renderSlides();
+            this.setupEventListeners();
+            this.startAutoPlay();
+        }
+    }
+    
+    async loadSlides() {
+        try {
+            // Fetch slides from PocketBase
+            const result = await window.pb.collection("slider_slides").getFullList({
+                sort: 'order',
+                filter: 'active = true'
+            });
+            
+            this.slides = result.map(slide => this.formatSlide(slide));
+            console.log(`Loaded ${this.slides.length} slides`);
+            
+        } catch (error) {
+            console.error("Error loading slides:", error);
+            // Fallback to default slides if no data in PocketBase
+            this.loadDefaultSlides();
+        }
+    }
+    
+    formatSlide(slide) {
+        // Get image URLs
+        let imageUrl = '/images/placeholder.jpg';
+        let logoUrl = '';
+        
+        if (slide.image) {
+            if (typeof slide.image === 'string') {
+                if (slide.image.startsWith('http')) {
+                    imageUrl = slide.image;
+                } else {
+                    imageUrl = window.pb.files.getURL(slide, slide.image);
+                }
+            }
+        }
+        
+        if (slide.logo) {
+            if (typeof slide.logo === 'string') {
+                if (slide.logo.startsWith('http')) {
+                    logoUrl = slide.logo;
+                } else {
+                    logoUrl = window.pb.files.getURL(slide, slide.logo);
+                }
+            }
+        }
+        
+        return {
+            id: slide.id,
+            title: slide.title || "Product Title",
+            subtitle: slide.subtitle || "",
+            description: slide.description || "",
+            image: imageUrl,
+            logo: logoUrl,
+            buttonText: slide.button_text || "Shop Now",
+            buttonLink: slide.button_link || "#",
+            order: slide.order || 0,
+            bgColor: slide.bg_color || "#000"
+        };
+    }
+    
+    loadDefaultSlides() {
+        // Fallback default slides
+        this.slides = [
+            {
+                id: '1',
+                title: 'iPhone 14 Series',
+                subtitle: 'Up to 10% off Voucher',
+                image: 'images/slider-pic1.jpg',
+                logo: 'images/1200px-Apple_gray_logo 1.png',
+                buttonText: 'Shop Now',
+                buttonLink: '#'
+            },
+            {
+                id: '2',
+                title: 'iPhone 14 Series',
+                subtitle: 'Up to 10% off Voucher',
+                image: 'images/slider-pic2.webp',
+                logo: 'images/1200px-Apple_gray_logo 1.png',
+                buttonText: 'Shop Now',
+                buttonLink: '#'
+            },
+            {
+                id: '3',
+                title: 'iPhone 14 Series',
+                subtitle: 'Up to 10% off Voucher',
+                image: 'images/New-Mercedes-Benz-Gtr-Licensed-Ride-on-Car-Kids-Electric-Toy-Car 1.png',
+                logo: 'images/1200px-Apple_gray_logo 1.png',
+                buttonText: 'Shop Now',
+                buttonLink: '#'
+            }
+        ];
+    }
+    
+    renderSlides() {
+        if (!this.sliderContainer) return;
+        
+        // Clear existing slides
+        this.sliderContainer.innerHTML = '';
+        
+        // Render each slide
+        this.slides.forEach((slide, index) => {
+            const slideDiv = document.createElement('div');
+            slideDiv.className = `slides ${index === this.currentIndex ? 'active' : ''}`;
+            slideDiv.id = `slide${slide.id}`;
+            
+            slideDiv.innerHTML = `
+                <div class="overlay">
+                    <p>
+                        ${slide.logo ? `<img src="${slide.logo}" alt="Logo" class="top-img">` : ''}
+                        ${slide.title}
+                    </p>
+                    <h1>${slide.subtitle}</h1>
+                    ${slide.description ? `<p>${slide.description}</p>` : ''}
+                    <a href="${slide.buttonLink}" class="SN">${slide.buttonText} <i data-lucide="arrow-right"></i></a>
+                </div>
+                <div class="bg-div">
+                    <img src="${slide.image}" alt="${slide.title}" class="bg-image">
+                </div>
+            `;
+            
+            this.sliderContainer.appendChild(slideDiv);
+        });
+        
+        // Render navigation dots
+        this.renderNavigationDots();
+        
+        // Reinitialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+    
+    renderNavigationDots() {
+        if (!this.sliderNav) return;
+        
+        this.sliderNav.innerHTML = '';
+        
+        this.slides.forEach((slide, index) => {
+            const dot = document.createElement('a');
+            dot.href = `#slide${slide.id}`;
+            dot.className = `slider-nav-btn ${index === this.currentIndex ? 'active' : ''}`;
+            dot.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.goToSlide(index);
+            });
+            this.sliderNav.appendChild(dot);
+        });
+    }
+    
+    goToSlide(index) {
+        if (index === this.currentIndex) return;
+        if (index < 0) index = this.slides.length - 1;
+        if (index >= this.slides.length) index = 0;
+        
+        this.currentIndex = index;
+        this.updateSlider();
+    }
+    
+    nextSlide() {
+        this.goToSlide(this.currentIndex + 1);
+    }
+    
+    prevSlide() {
+        this.goToSlide(this.currentIndex - 1);
+    }
+    
+    updateSlider() {
+        // Update slide visibility
+        const slides = document.querySelectorAll('.slides');
+        slides.forEach((slide, index) => {
+            if (index === this.currentIndex) {
+                slide.classList.add('active');
+                slide.style.display = 'flex';
+            } else {
+                slide.classList.remove('active');
+                slide.style.display = 'none';
+            }
+        });
+        
+        // Update navigation dots
+        const dots = document.querySelectorAll('.slider-nav-btn');
+        dots.forEach((dot, index) => {
+            if (index === this.currentIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+        
+        // Reset auto-play timer
+        this.resetAutoPlay();
+    }
+    
+    setupEventListeners() {
+        if (this.prevBtn) {
+            this.prevBtn.addEventListener('click', () => {
+                this.prevSlide();
+                this.resetAutoPlay();
+            });
+        }
+        
+        if (this.nextBtn) {
+            this.nextBtn.addEventListener('click', () => {
+                this.nextSlide();
+                this.resetAutoPlay();
+            });
+        }
+        
+        // Pause auto-play on hover
+        const sliderWrapper = document.querySelector('.slide-wrapper');
+        if (sliderWrapper) {
+            sliderWrapper.addEventListener('mouseenter', () => this.stopAutoPlay());
+            sliderWrapper.addEventListener('mouseleave', () => this.startAutoPlay());
+        }
+    }
+    
+    startAutoPlay() {
+        if (this.autoPlayInterval) return;
+        this.autoPlayInterval = setInterval(() => {
+            this.nextSlide();
+        }, this.autoPlayDelay);
+    }
+    
+    stopAutoPlay() {
+        if (this.autoPlayInterval) {
+            clearInterval(this.autoPlayInterval);
+            this.autoPlayInterval = null;
+        }
+    }
+    
+    resetAutoPlay() {
+        this.stopAutoPlay();
+        this.startAutoPlay();
+    }
+}
+
+// Initialize slider when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for PocketBase to be available
+    const checkPB = setInterval(() => {
+        if (window.pb) {
+            clearInterval(checkPB);
+            window.dynamicSlider = new DynamicSlider();
+        }
+    }, 100);
+});
+
 // Also try to initialize search after components load
 window.addEventListener('load', () => {
     console.log("Window fully loaded");
