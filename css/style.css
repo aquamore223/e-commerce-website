@@ -1293,6 +1293,22 @@ color: white;
 
 }
 
+@media (max-width :450px) {
+
+    .scroll-img-section{
+    display:flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width:100px;
+    height:150px; 
+    border-radius:5px;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+}
+    
+}
 
                    /* log pages_*/
 
