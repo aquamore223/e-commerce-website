@@ -427,7 +427,7 @@ i {
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    width: 100%;
+    width:200px;
     height:250px; 
     border-radius:5px;
     overflow: hidden;
@@ -1341,21 +1341,37 @@ color: white;
         flex-direction: column-reverse;
         overflow: hidden;
     }
+
+    .hero3-layout{
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    padding: 5px;
+    border-radius: 8px;
+   
+}
+
       .services{
          gap:10px;
+         justify-content: center;
+          
     }
      .service-wrap{
         width: 150px;
         padding:10px;
     }
+
     .footerDetails{
-         flex-wrap: wrap;
+         display: grid;
+         grid-template-columns: repeat(2, 1fr);
+         width:100%;
+         margin: 0;
          padding: 0;
     }
     .footer-sect{
     width:200px;
     padding: 25px;
-    gap:20px;  
+    gap:10px;    
 }
 
 
@@ -2635,11 +2651,28 @@ form p a {
 }
 
 @media (max-width: 768px) {
+
+    .products-container {
+        display: grid;
+       grid-template-columns: repeat(2, 1fr);
+        gap:10px;
+        }
     .page-numbers {
         order: 1;
         width: 100%;
         justify-content: center;
     }
+
+    .products-container .scroll{ 
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px,1fr));
+        gap:10px;
+           
+    }
+
+    .products-container .scroll-img-section{
+        width:100%;
+      }
     
     .per-page-selector {
         border-left: none;
