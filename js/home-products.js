@@ -385,7 +385,9 @@ class HomeProductsLoader {
       { name: "Medicine", icon: "pill" },
       { name: "Baby's&Toys", icon: "baby" },
       { name: "Groceries&Pets", icon: "shopping-cart" },
-      { name: "Health&Beauty", icon: "heart" }
+      { name: "Health&Beauty", icon: "heart" },
+      { name: "Electronics", icon: "cpu" }
+
     ];
 
     container.innerHTML = categories.map(cat => `
