@@ -1,8 +1,13 @@
-// wishlist-page.js - Fully dynamic wishlist page with PocketBase support
+// wishlist-page.js - Fully dynamic wishlist page with PocketBase support and Pagination
 
 document.addEventListener('DOMContentLoaded', function() {
     initWishlistPage();
 });
+
+// Pagination variables
+let currentPage = 1;
+let itemsPerPage = 8;
+let allWishlistItems = [];
 
 async function initWishlistPage() {
     // Load wishlist from localStorage
@@ -19,12 +24,14 @@ async function loadWishlistItems() {
     
     if (!container) return;
     
+    allWishlistItems = wishlist;
+    
     // Update count in header
     if (countSpan) {
-        countSpan.textContent = `(${wishlist.length})`;
+        countSpan.textContent = `(${allWishlistItems.length})`;
     }
     
-    if (wishlist.length === 0) {
+    if (allWishlistItems.length === 0) {
         // Show empty wishlist
         container.innerHTML = `
             <div class="empty-wishlist" style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
@@ -34,37 +41,218 @@ async function loadWishlistItems() {
                 <a href="/index.html" class="gen-btn" style="display: inline-block; padding: 12px 30px;">Continue Shopping</a>
             </div>
         `;
-    } else {
-        // Render wishlist items - NO RATING STARS
-        container.innerHTML = wishlist.map(item => `
-            <div class="scroll" data-product-id="${item.id}">
-                <div class="scroll-img-section">
-                    <a href="/product-details.html?id=${item.id}">
-                        <img src="${item.img || '/images/placeholder.jpg'}" alt="${item.name || 'Product'}" onerror="this.src='/images/placeholder.jpg'">
-                    </a>
-                    ${item.discount ? `<span class="scroll-tag">-${item.discount}%</span>` : ''}
-                    <div class="scroll-icon">
-                        <span class="heart-tag delete-btn" data-id="${item.id}">
-                            <i data-lucide="trash-2" width="15" height="15"></i>
-                        </span>
-                    </div>
-                    <button class="add-to-cart-btn" data-id="${item.id}">
-                        <i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart
-                    </button>
-                </div>
-                <div class="scroll-text">
-                    <a href="/product-details.html?id=${item.id}">
-                        <h5>${item.name || 'Product'}</h5>
-                    </a>
-                    <p>${formatPrice(item.price || '0')} ${item.oldPrice ? `<span>${formatPrice(item.oldPrice)}</span>` : ''}</p>
-                </div>
-            </div>
-        `).join('');
+        // Hide pagination
+        const paginationContainer = document.getElementById('wishlist-pagination');
+        if (paginationContainer) paginationContainer.style.display = 'none';
+        return;
     }
     
-    // Reinitialize Lucide icons for new content
+    // Render first page
+    renderWishlistPage();
+    setupWishlistPagination();
+    
+    // Reinitialize Lucide icons
     if (typeof lucide !== 'undefined') {
         setTimeout(() => lucide.createIcons(), 50);
+    }
+}
+
+function renderWishlistPage() {
+    const container = document.querySelector('.wishlist-main .wish-grid');
+    if (!container) return;
+    
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageItems = allWishlistItems.slice(start, end);
+    
+    if (pageItems.length === 0 && allWishlistItems.length > 0) {
+        // Go to previous page if current page is empty
+        currentPage--;
+        renderWishlistPage();
+        setupWishlistPagination();
+        return;
+    }
+    
+    container.innerHTML = pageItems.map(item => `
+        <div class="scroll" data-product-id="${item.id}">
+            <div class="scroll-img-section">
+                <a href="/product-details.html?id=${item.id}">
+                    <img src="${item.img || '/images/placeholder.jpg'}" alt="${item.name || 'Product'}" onerror="this.src='/images/placeholder.jpg'">
+                </a>
+                ${item.discount ? `<span class="scroll-tag">-${item.discount}%</span>` : ''}
+                <div class="scroll-icon">
+                    <span class="heart-tag delete-btn" data-id="${item.id}">
+                        <i data-lucide="trash-2" width="15" height="15"></i>
+                    </span>
+                </div>
+                <button class="add-to-cart-btn" data-id="${item.id}">
+                    <i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart
+                </button>
+            </div>
+            <div class="scroll-text">
+                <a href="/product-details.html?id=${item.id}">
+                    <h5>${item.name || 'Product'}</h5>
+                </a>
+                <p>${formatPrice(item.price || '0')} ${item.oldPrice ? `<span>${formatPrice(item.oldPrice)}</span>` : ''}</p>
+            </div>
+        </div>
+    `).join('');
+    
+    // Reinitialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function setupWishlistPagination() {
+    const paginationContainer = document.getElementById('wishlist-pagination');
+    if (!paginationContainer) return;
+    
+    const totalPages = Math.ceil(allWishlistItems.length / itemsPerPage);
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'flex';
+    paginationContainer.style.justifyContent = 'center';
+    paginationContainer.style.alignItems = 'center';
+    paginationContainer.style.gap = '10px';
+    paginationContainer.style.marginTop = '40px';
+    paginationContainer.style.marginBottom = '40px';
+    paginationContainer.style.flexWrap = 'wrap';
+    
+    let paginationHTML = `
+        <button class="page-btn prev-page" ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fas fa-chevron-left"></i> Previous
+        </button>
+    `;
+    
+    // Page numbers
+    paginationHTML += '<div class="page-numbers" style="display: flex; gap: 6px; flex-wrap: wrap;">';
+    
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHTML += `
+                <button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">
+                    ${i}
+                </button>
+            `;
+        }
+    } else {
+        // First page
+        paginationHTML += `
+            <button class="page-number ${1 === currentPage ? 'active' : ''}" data-page="1">1</button>
+        `;
+        
+        if (currentPage > 3) {
+            paginationHTML += '<span class="page-ellipsis">...</span>';
+        }
+        
+        // Pages around current
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+        
+        for (let i = start; i <= end; i++) {
+            paginationHTML += `
+                <button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">
+                    ${i}
+                </button>
+            `;
+        }
+        
+        if (currentPage < totalPages - 2) {
+            paginationHTML += '<span class="page-ellipsis">...</span>';
+        }
+        
+        // Last page
+        paginationHTML += `
+            <button class="page-number ${totalPages === currentPage ? 'active' : ''}" data-page="${totalPages}">
+                ${totalPages}
+            </button>
+        `;
+    }
+    
+    paginationHTML += '</div>';
+    
+    paginationHTML += `
+        <button class="page-btn next-page" ${currentPage === totalPages ? 'disabled' : ''}>
+            Next <i class="fas fa-chevron-right"></i>
+        </button>
+        
+        <div class="per-page-selector" style="display: flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid #ddd;">
+            <label>Show:</label>
+            <select class="per-page-select" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                <option value="4" ${itemsPerPage === 4 ? 'selected' : ''}>4</option>
+                <option value="8" ${itemsPerPage === 8 ? 'selected' : ''}>8</option>
+                <option value="12" ${itemsPerPage === 12 ? 'selected' : ''}>12</option>
+                <option value="16" ${itemsPerPage === 16 ? 'selected' : ''}>16</option>
+            </select>
+            <span>per page</span>
+        </div>
+        
+        <div class="pagination-info" style="font-size: 13px; color: #666; margin-left: 10px; padding-left: 10px; border-left: 1px solid #ddd;">
+            Showing ${(currentPage - 1) * itemsPerPage + 1} to ${Math.min(currentPage * itemsPerPage, allWishlistItems.length)} of ${allWishlistItems.length} items
+        </div>
+    `;
+    
+    paginationContainer.innerHTML = paginationHTML;
+    
+    // Attach pagination events
+    attachWishlistPaginationEvents(totalPages);
+}
+
+function attachWishlistPaginationEvents(totalPages) {
+    // Previous button
+    const prevBtn = document.querySelector('#wishlist-pagination .prev-page');
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderWishlistPage();
+                setupWishlistPagination();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+    }
+    
+    // Next button
+    const nextBtn = document.querySelector('#wishlist-pagination .next-page');
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderWishlistPage();
+                setupWishlistPagination();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+    }
+    
+    // Page number buttons
+    const pageNumbers = document.querySelectorAll('#wishlist-pagination .page-number');
+    pageNumbers.forEach(btn => {
+        btn.onclick = () => {
+            const page = parseInt(btn.dataset.page);
+            if (page && page !== currentPage) {
+                currentPage = page;
+                renderWishlistPage();
+                setupWishlistPagination();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+    });
+    
+    // Per page selector
+    const perPageSelect = document.querySelector('#wishlist-pagination .per-page-select');
+    if (perPageSelect) {
+        perPageSelect.onchange = (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            currentPage = 1;
+            renderWishlistPage();
+            setupWishlistPagination();
+        };
     }
 }
 
@@ -92,7 +280,6 @@ function setupEventListeners() {
     // Move all to cart button
     const moveAllBtn = document.querySelector('.wishlist-main .wish-hd .shadow-btn');
     if (moveAllBtn) {
-        // Remove existing listener to prevent duplicates
         moveAllBtn.removeEventListener('click', moveAllToCart);
         moveAllBtn.addEventListener('click', moveAllToCart);
     }
@@ -121,23 +308,13 @@ function deleteFromWishlist(productId) {
     // Show feedback
     showNotification('Item removed from wishlist');
     
-    // Remove the item from DOM with animation
-    const itemElement = document.querySelector(`.scroll[data-product-id="${productId}"]`);
-    if (itemElement) {
-        itemElement.style.transition = 'opacity 0.3s ease';
-        itemElement.style.opacity = '0';
-        setTimeout(() => {
-            // Reload the wishlist items
-            loadWishlistItems();
-            updateWishlistCount();
-            loadJustForYou();
-        }, 300);
-    } else {
-        // If element not found, just reload
-        loadWishlistItems();
-        updateWishlistCount();
-        loadJustForYou();
-    }
+    // Reset to first page
+    currentPage = 1;
+    
+    // Reload the wishlist items
+    loadWishlistItems();
+    updateWishlistCount();
+    loadJustForYou();
     
     // Dispatch event for other pages
     document.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: wishlist }));
@@ -212,6 +389,9 @@ async function moveAllToCart(e) {
     
     // Show success message
     showNotification(`Added ${wishlist.length} items to cart`);
+    
+    // Reset to first page
+    currentPage = 1;
     
     // Reload wishlist items
     await loadWishlistItems();
@@ -444,6 +624,9 @@ async function loadJustForYou() {
                     ${p.tag ? `<span class="scroll-tag">${p.tag}</span>` : ""}
                     
                     <div class="scroll-icon">
+                        <span class="heart-icon" data-id="${p.id}">
+                            <i data-lucide="heart" width="15" height="15"></i>
+                        </span>
                         <span class="eye-icon" data-id="${p.id}">
                             <i data-lucide="eye" width="15" height="15"></i>
                         </span>
@@ -494,5 +677,10 @@ function generateStars(rating) {
 window.wishlistPage = {
     reload: loadWishlistItems,
     deleteItem: deleteFromWishlist,
-    moveAllToCart: moveAllToCart
+    moveAllToCart: moveAllToCart,
+    goToPage: (page) => {
+        currentPage = page;
+        renderWishlistPage();
+        setupWishlistPagination();
+    }
 };
