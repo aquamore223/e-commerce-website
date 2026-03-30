@@ -302,6 +302,97 @@ window.addEventListener("load", () => {
 });
 
 
+// ==================== LOAD CATEGORY LINKS ====================
+async function loadCategoryLinks() {
+    try {
+        // Fetch all products from PocketBase
+        const products = await window.pb.collection("exclusive_ecommerce").getFullList();
+        
+        // Get unique categories
+        const uniqueCategories = [...new Set(products.map(p => p.category).filter(c => c))];
+        
+        // Define category display names and their corresponding filter values
+        const categoryMap = [
+            { display: "Woman's Fashion", filter: "Fashion" },
+            { display: "Men's Fashion", filter: "Fashion" },
+            { display: "Electronics", filter: "Electronics" },
+            { display: "Home & Lifestyle", filter: "Home & Lifestyle" },
+            { display: "Medicine", filter: "Medicine" },
+            { display: "Sports & Outdoor", filter: "Sports & Outdoor" },
+            { display: "Baby's & Toys", filter: "Baby's & Toys" },
+            { display: "Groceries & Pets", filter: "Groceries & Pets" },
+            { display: "Health & Beauty", filter: "Health & Beauty" }
+        ];
+        
+        const container = document.querySelector(".exclusive-text ul");
+        if (!container) return;
+        
+        container.innerHTML = categoryMap.map(cat => `
+            <li>
+                <a href="product-category.html?category=${encodeURIComponent(cat.filter)}">${cat.display}</a>
+                ${cat.display.includes("Fashion") ? `<i data-lucide="chevron-right" class="chev-icon"></i>` : ''}
+            </li>
+        `).join("");
+        
+        // Reinitialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error("Error loading categories:", error);
+        
+        // Fallback static categories if PocketBase fails
+        loadStaticCategoryLinks();
+    }
+}
+
+function loadStaticCategoryLinks() {
+    const categories = [
+        { display: "Woman's Fashion", filter: "Fashion", hasIcon: true },
+        { display: "Men's Fashion", filter: "Fashion", hasIcon: true },
+        { display: "Electronics", filter: "Electronics", hasIcon: false },
+        { display: "Home & Lifestyle", filter: "Home & Lifestyle", hasIcon: false },
+        { display: "Medicine", filter: "Medicine", hasIcon: false },
+        { display: "Sports & Outdoor", filter: "Sports & Outdoor", hasIcon: false },
+        { display: "Baby's & Toys", filter: "Baby's & Toys", hasIcon: false },
+        { display: "Groceries & Pets", filter: "Groceries & Pets", hasIcon: false },
+        { display: "Health & Beauty", filter: "Health & Beauty", hasIcon: false }
+    ];
+    
+    const container = document.querySelector(".exclusive-text ul");
+    if (!container) return;
+    
+    container.innerHTML = categories.map(cat => `
+        <li>
+            <a href="product-category.html?category=${encodeURIComponent(cat.filter)}">${cat.display}</a>
+            ${cat.hasIcon ? `<i data-lucide="chevron-right" class="chev-icon"></i>` : ''}
+        </li>
+    `).join("");
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+// Call this function when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for PocketBase to be available
+    const checkPB = setInterval(() => {
+        if (window.pb) {
+            clearInterval(checkPB);
+            loadCategoryLinks();
+        }
+    }, 100);
+    
+    // Fallback after 3 seconds
+    setTimeout(() => {
+        clearInterval(checkPB);
+        if (!window.pb) {
+            loadStaticCategoryLinks();
+        }
+    }, 3000);
+});
+
 // ==================== DYNAMIC SLIDER ====================
 
 class DynamicSlider {

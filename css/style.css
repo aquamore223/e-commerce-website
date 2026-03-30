@@ -645,7 +645,7 @@ color: white;
 }
 
 .category-tab{
-    width:8rem;
+    min-width:8rem;
     height:8rem;
     box-shadow: 0.5px 0.5px 3px;
     display: flex;

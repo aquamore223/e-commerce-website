@@ -27,55 +27,51 @@ let allFilteredProducts = [];
 
 /* ---------------- LOAD CATEGORY PRODUCTS ---------------- */
 async function loadCategoryProducts() {
-  const container = document.querySelector(".products-container");
-  const title = document.querySelector(".category-title");
+    const container = document.querySelector(".products-container");
+    const title = document.querySelector(".category-title");
 
-  if (!container) return;
+    if (!container) return;
 
-  const params = new URLSearchParams(window.location.search);
-  const category = params.get("category");
+    const params = new URLSearchParams(window.location.search);
+    const category = decodeURIComponent(params.get("category")); // Decode URL encoded category
 
-  if (!category) {
-    container.innerHTML = "<p>No category selected</p>";
-    return;
-  }
-
-  if (title) {
-    title.textContent = category.toUpperCase();
-  }
-
-  try {
-    // Fetch products from PocketBase
-    const result = await window.pb
-      .collection("exclusive_ecommerce")
-      .getFullList({
-        sort: '-created',
-        $autoCancel: false
-      });
-
-    // Format and filter products
-    allFilteredProducts = result
-      .map(p => formatPBProduct(p))
-      .filter(p => p.category?.toLowerCase() === category.toLowerCase());
-
-    if (allFilteredProducts.length === 0) {
-      container.innerHTML = "<p>No products found</p>";
-      const paginationEl = document.getElementById("pagination");
-      if (paginationEl) paginationEl.style.display = "none";
-      return;
+    if (!category) {
+        container.innerHTML = "<p>No category selected</p>";
+        return;
     }
 
-    // Render first page
-    renderProductsPage();
-    setupPagination();
+    if (title) {
+        title.textContent = category.toUpperCase();
+    }
 
-    if (window.lucide) lucide.createIcons();
-    applyIconStates();
+    try {
+        const result = await window.pb.collection("exclusive_ecommerce").getFullList({
+            sort: '-created',
+            $autoCancel: false
+        });
 
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = "<p>Error loading products</p>";
-  }
+        // Format and filter products - case insensitive
+        allFilteredProducts = result
+            .map(p => formatPBProduct(p))
+            .filter(p => p.category?.toLowerCase() === category.toLowerCase());
+
+        if (allFilteredProducts.length === 0) {
+            container.innerHTML = `<p>No products found in "${category}" category</p>`;
+            const paginationEl = document.getElementById("pagination");
+            if (paginationEl) paginationEl.style.display = "none";
+            return;
+        }
+
+        renderProductsPage();
+        setupPagination();
+
+        if (window.lucide) lucide.createIcons();
+        applyIconStates();
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = "<p>Error loading products</p>";
+    }
 }
 
 /* ---------------- RENDER PRODUCTS FOR CURRENT PAGE ---------------- */

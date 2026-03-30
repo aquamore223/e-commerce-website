@@ -379,7 +379,13 @@ class HomeProductsLoader {
       { name: "Gaming", icon: "gamepad-2" },
       { name: "Cameras", icon: "camera" },
       { name: "Fashion", icon: "shirt" },
-      { name: "Furniture", icon: "armchair" }
+      { name: "Furniture", icon: "armchair" },
+      { name: "Sports&Outdoors", icon: "dumbbell" },
+      { name: "Home&Lifestyle", icon: "home" },
+      { name: "Medicine", icon: "pill" },
+      { name: "Baby's&Toys", icon: "baby" },
+      { name: "Groceries&Pets", icon: "shopping-cart" },
+      { name: "Health&Beauty", icon: "heart" }
     ];
 
     container.innerHTML = categories.map(cat => `
