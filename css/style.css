@@ -2330,7 +2330,7 @@ form p a {
 
 
                     /*product-details-main*/
-/* ======================== PRODUCT DETAILS PAGE ======================== */
+/* ========================   DETAILS PAGE ======================== */
 
 .product-details-main {
     margin: 30px 150px;
@@ -2642,6 +2642,22 @@ form p a {
         display: flex;
         flex-wrap: wrap;
     }
+    .related-products-grid{
+         display: grid;
+       grid-template-columns: repeat(2, 1fr) !important;
+        gap:10px;
+    }
+   .related-products-grid .scroll{ 
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px,1fr)) !important;
+        gap:10px;
+           
+    }
+
+    .related-products-grid.scroll-img-section{
+        width:100% !important;
+      }
+
 }
 
 .dsp-flx{
