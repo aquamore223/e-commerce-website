@@ -239,22 +239,47 @@ i {
     flex: 1;
 }
 .top-img {
-    width: 30px;
-    
+    max-width:35px;  
+     
+}
+.bg-overlay{
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 .overlay{
     color: white;
     display: flex;
     flex-direction: column;
-    gap: 15px; 
+    gap:5px; 
     overflow: hidden;
     padding-left: 50px;
     text-align: left;
-    height: 250px;
+     height: 250px;
     justify-content: center;
     width:350px;
 
 }
+ .overlay p{
+        font-size: 10px;
+        max-height:80px;
+        overflow:hidden;
+    }
+.overlay a {
+    color: var(--background-color);
+    margin: 15px 0 ;
+    display: flex;
+    align-items: center;
+    text-decoration: none;  
+    border-bottom: 1px solid rgb(242, 242, 243);
+    max-width: fit-content;     
+}
+
+.overlay a:hover {
+    color: var(--secondary-color);
+    border-bottom: 1px solid var(--secondary-color);
+}
+
 
 .slide-wrapper {
     width: 100%;
@@ -352,13 +377,7 @@ i {
 }
 
 
-.overlay a {
-    color: var(--background-color);
-    padding: 5px 0 ;
-    display: flex;
-    align-items: center;
-    
-}
+
 #first-content {
     padding: 30px 150px ;
     gap: 20px;
@@ -409,15 +428,36 @@ i {
     gap: 10px;
     font-size: 12px;
     color: var(--text-color);
+    align-items: center;
 }
 .timer span{
     font-size:20px;
     font-weight: bolder;
 }
 
+.time-bdy{
+     display:flex;
+     align-items: center;
+     gap:5px;
+}
+
+.time-dot {
+    display:flex;
+    flex-direction: column;
+    gap:5px;
+    margin-top: 10px;
+}
+  
+.time-dot span{
+    background-color:var(--secondary-color);
+    border-radius: 50%;
+    width:3px;
+    height:3px;
+    display: flex;
+}
+ 
 .first-product-scroll{
     padding-left:150px;
-    scrollbar-width: none;
     margin-bottom:20px;
 }
 
@@ -688,22 +728,28 @@ color: white;
     align-items: center;
     height:300px;
     margin:40px 0 ;
+    overflow: hidden;
+    justify-content:space-between;
     
 }
+ 
+.buy-now-btn a{
+    text-decoration: none; 
+    font-weight: bold;
+   
+}
+
+.hero-2 .overlay{
+    gap:15px;
+
+}
+
+ 
 
 .hero-2-pics{
-    max-width: 500px;
-    padding: 80px;
-    
-    
-}
-
-#jbl{
-    object-fit: contain;
-    width: 150%;
     filter: drop-shadow(5px 0 10px rgb(219, 218, 218));
-     transform:scaleX(-1);
-   
+    transform:scaleX(-1);  
+    width:60%;
 }
 .hero2-timers{
     display: flex;
@@ -741,6 +787,14 @@ color: white;
     height:3rem;
     background-color:hsl(144, 100%, 50%);
     color: white;
+    display: flex;
+    justify-content: center;
+    border-radius: 5px;
+    border:none;
+}
+
+.buy-now-btn :hover{
+     background-color:hsl(144, 80%, 45%);
 }
 
 .green-scroll-tag{
@@ -1295,12 +1349,23 @@ color: white;
         font-size: 16px;
     }
      .overlay a{
-        padding: 8px 15px;
+        bottom:0px;
         font-size: 14px;
     }
     .overlay p{
         font-size: 10px;
+        height:45px;
+        overflow:hidden;
+
     }
+
+    .ad-head{ 
+     gap: 20px;    
+    }
+
+    .time-dot {
+    margin-top: 6px;
+}
 
 
     .first-product-scroll{
@@ -1337,10 +1402,21 @@ color: white;
     width:2rem;
 }
     .hero-2{
-        flex-wrap: wrap;
-        flex-direction: column-reverse;
-        overflow: hidden;
+        background-image: url("/images/JBL_BOOMBOX_2_HERO_020_x1.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
     }
+    .hero-2-pics{
+        display: none;
+    }
+    .hero2-timer{
+        padding: 5px;
+    }
+    .hero-2 .overlay{
+        margin-left:30px ;
+    }
+    
 
     .hero3-layout{
     bottom: 5px;

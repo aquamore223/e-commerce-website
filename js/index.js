@@ -523,10 +523,10 @@ class DynamicSlider {
             
             slideDiv.innerHTML = `
                 <div class="overlay">
-                    <p>
+                    <div class="bg-overlay">
                         ${slide.logo ? `<img src="${slide.logo}" alt="Logo" class="top-img">` : ''}
                         ${slide.title}
-                    </p>
+                    </div>
                     <h1>${slide.subtitle}</h1>
                     ${slide.description ? `<p>${slide.description}</p>` : ''}
                     <a href="${slide.buttonLink}" class="SN">${slide.buttonText} <i data-lucide="arrow-right"></i></a>
