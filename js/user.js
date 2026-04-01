@@ -10,72 +10,31 @@ class AuthSystem {
     }
 
     async init() {
-        // Check if user is already logged in
         await this.checkAuthStatus();
-        
-        // Setup event listeners for auth forms
         this.setupAuthForms();
-        
-        // Wait for header to load before updating UI
-        await this.waitForHeader();
-        
-        // Update UI based on auth status
         this.updateUI();
-        
-        // Setup logout handler
         this.setupLogoutHandler();
         
-        // Listen for auth status changes
         document.addEventListener('authStatusChanged', () => {
             this.updateUI();
         });
         
-        // Listen for header load event
         document.addEventListener('headerLoaded', () => {
-            console.log("Header loaded event received, updating UI");
+            console.log("Header loaded, updating UI");
             this.updateUI();
         });
-    }
-
-    async waitForHeader() {
-        // Check if header is already loaded
-        const header = document.getElementById('header');
-        if (header && header.innerHTML && !header.innerHTML.includes('loading')) {
-            console.log("Header already loaded");
-            return;
-        }
         
-        // Wait for header to be loaded
-        console.log("Waiting for header to load...");
-        return new Promise((resolve) => {
-            const checkInterval = setInterval(() => {
-                const header = document.getElementById('header');
-                if (header && header.innerHTML && !header.innerHTML.includes('loading')) {
-                    clearInterval(checkInterval);
-                    console.log("Header loaded");
-                    resolve();
-                }
-            }, 100);
-            
-            // Timeout after 3 seconds
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                console.log("Header load timeout, proceeding anyway");
-                resolve();
-            }, 3000);
-        });
+        console.log("AuthSystem initialized");
     }
 
     async checkAuthStatus() {
         try {
-            // Check if there's a valid auth token
             if (this.pb && this.pb.authStore.isValid) {
-                // Fetch fresh user data from your custom collection with auto-cancel disabled
                 const userId = this.pb.authStore.model?.id;
                 if (userId) {
                     try {
                         const userRecord = await this.pb.collection(this.COLLECTION_NAME).getOne(userId, {
-                            $autoCancel: false  // Prevent auto-cancellation
+                            $autoCancel: false
                         });
                         this.currentUser = userRecord;
                         console.log("User loaded:", this.currentUser?.name || this.currentUser?.email);
@@ -131,13 +90,17 @@ class AuthSystem {
             });
             this.currentUser = authData.record;
             
-            // Wait for header then update UI
-            await this.waitForHeader();
+            console.log("✅ Login successful for:", this.currentUser?.name || this.currentUser?.email);
+            
+            // IMMEDIATELY update the UI
             this.updateUI();
             
             document.dispatchEvent(new CustomEvent('authStatusChanged', { 
                 detail: { isLoggedIn: true, user: this.currentUser }
             }));
+            
+            sessionStorage.setItem('userLoggedIn', 'true');
+            sessionStorage.setItem('userName', this.currentUser?.name || this.currentUser?.email);
             
             return { success: true, user: authData.record };
         } catch (error) {
@@ -150,6 +113,9 @@ class AuthSystem {
         try {
             this.pb.authStore.clear();
             this.currentUser = null;
+            
+            sessionStorage.removeItem('userLoggedIn');
+            sessionStorage.removeItem('userName');
             
             this.updateUI();
             
@@ -166,10 +132,14 @@ class AuthSystem {
     }
 
     setupLogoutHandler() {
+        // Use event delegation for logout button
         document.addEventListener('click', (e) => {
+            // Check for logout button by ID or class
             const logoutBtn = e.target.closest('#logout-btn, .logout-btn, [data-logout]');
             if (logoutBtn) {
                 e.preventDefault();
+                e.stopPropagation();
+                console.log("Logout button clicked");
                 this.logout();
             }
         });
@@ -233,15 +203,20 @@ class AuthSystem {
                     return;
                 }
                 
+                const submitBtn = signinForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = "Logging in...";
+                submitBtn.disabled = true;
+                
                 const result = await this.login(email, password);
                 
                 if (result.success) {
                     alert("Login successful!");
-                    setTimeout(() => {
-                        window.location.href = "/index.html";
-                    }, 500);
+                    window.location.href = "/index.html";
                 } else {
                     alert("Login failed: " + result.error);
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
                 }
             });
         }
@@ -259,46 +234,57 @@ class AuthSystem {
     }
 
     updateUI() {
-        console.log("Updating UI - Current user:", this.currentUser?.name || this.currentUser?.email || 'not logged in');
+        console.log("⚡ Updating UI - Logged in:", !!this.currentUser);
         
-        const userIcon = document.querySelector('.user-icon');
-        const loginLink = document.querySelector('.login-link');
-        
-        console.log("Elements found:", { 
-            userIcon: !!userIcon, 
-            loginLink: !!loginLink,
-            page: window.location.pathname
-        });
-        
-        if (this.currentUser) {
-            if (userIcon) {
-                userIcon.style.display = "block";
-                userIcon.style.visibility = "visible";
-                userIcon.style.opacity = "1";
-                userIcon.classList.add('logged-in');
-                console.log("✅ User icon shown");
-            } else {
-                console.warn("⚠️ User icon element not found!");
-            }
+        const updateElements = (retries = 0) => {
+            // Elements to update
+            const userIcon = document.querySelector('.user-icon');
+            const loginLink = document.querySelector('.login-link');
+            const signUpLink = document.querySelector('.menu ul li a[href="/user/signup.html"]');
+            const signUpListItem = signUpLink?.closest('li');
             
-            if (loginLink) {
-                loginLink.style.display = "none";
-                console.log("Login link hidden");
+            if (userIcon || loginLink) {
+                if (this.currentUser) {
+                    // User is logged in
+                    if (userIcon) {
+                        userIcon.style.display = "block";
+                        userIcon.style.visibility = "visible";
+                        userIcon.style.opacity = "1";
+                        userIcon.classList.add('logged-in');
+                        console.log("✅ User icon shown");
+                    }
+                    if (loginLink) {
+                        loginLink.style.display = "none";
+                        console.log("Login link hidden");
+                    }
+                    // Hide Sign Up link in nav menu
+                    if (signUpListItem) {
+                        signUpListItem.style.display = "none";
+                        console.log("Sign Up link hidden");
+                    }
+                } else {
+                    // User is NOT logged in
+                    if (userIcon) {
+                        userIcon.style.display = "none";
+                        userIcon.style.visibility = "hidden";
+                    }
+                    if (loginLink) {
+                        loginLink.style.display = "flex";
+                        console.log("Login link shown");
+                    }
+                    // Show Sign Up link in nav menu
+                    if (signUpListItem) {
+                        signUpListItem.style.display = "block";
+                        console.log("Sign Up link shown");
+                    }
+                }
+            } else if (retries < 5) {
+                console.log(`Elements not found, retry ${retries + 1}/5`);
+                setTimeout(() => updateElements(retries + 1), 100);
             }
-        } else {
-            if (userIcon) {
-                userIcon.style.display = "none";
-                userIcon.style.visibility = "hidden";
-                userIcon.style.opacity = "0";
-                userIcon.classList.remove('logged-in');
-                console.log("User icon hidden");
-            }
-            
-            if (loginLink) {
-                loginLink.style.display = "flex";
-                console.log("Login link shown");
-            }
-        }
+        };
+        
+        updateElements();
     }
 
     isLoggedIn() {
@@ -310,7 +296,7 @@ class AuthSystem {
     }
 }
 
-// Initialize auth system when DOM is ready
+// Initialize auth system
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM loaded, initializing auth...");
     
@@ -331,17 +317,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3000);
 });
 
-// Also check when page is fully loaded
+if (sessionStorage.getItem('userLoggedIn') === 'true') {
+    console.log("Session storage shows user was logged in");
+}
+
 window.addEventListener('load', () => {
     console.log("Window loaded");
     if (window.authSystem) {
         setTimeout(() => {
             window.authSystem.updateUI();
-        }, 200);
+        }, 100);
     }
 });
 
-// Export for use in other files
 window.auth = {
     login: (email, password) => window.authSystem?.login(email, password),
     signup: (name, email, password) => window.authSystem?.signup(name, email, password),
