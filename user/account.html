@@ -13,50 +13,134 @@
 <body>
   <header id="header">loading....</header>
 
-  <main class="chkout-main">
-    <div class="acct-hd">
-      <div id="disp-hd"></div>
-      <div>welcome <span id="acct-username"></span></div>
-    </div>
+  <main class="account-main">
+    <!-- Breadcrumb -->
+    <div id="disp-hd"></div>
 
-    <div class="acct-hd">
-      <!-- Dynamic sections container -->
-      <div class="acct-fd"></div>
+    <!-- Mobile Menu Toggle Button -->
+    <button class="mobile-sidebar-toggle" id="mobile-sidebar-toggle">
+        <i class="fas fa-bars"></i> manage my account
+    </button>
 
-     <div class="edit-profile">
-    <h3>Edit Your Profile</h3>
-    <form id="profile-form" class="info-form">
-        <div class="info-flex">
-            <div class="str-flex" id="info-input">
-                <label for="firstName">First Name</label>
-                <input type="text" id="firstName" placeholder="Md" required>
-
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="rimel1111@gmail.com" required>
+    <!-- Account Container -->
+    <div class="account-container">
+        <!-- Sidebar (Collapsible on mobile) -->
+        <aside class="account-sidebar" id="account-sidebar">
+            <div class="sidebar-header">
+                <h3>My Account</h3>
+                <button class="close-sidebar" id="close-sidebar">&times;</button>
             </div>
-            <div class="str-flex" id="info-input">
-                <label for="lastName">Last Name</label>
-                <input type="text" id="lastName" placeholder="Rimel" required>
+            <div class="sidebar-overlay"></div>
+            <div class="acct-fd"></div>
+        </aside>
 
-                <label for="address">Address</label>
-                <input type="text" id="address" placeholder="Kingston, 5236, United States" required>
+        <!-- Main Content -->
+        <div class="account-content">
+            <div class="welcome-banner">
+                <h2>Welcome, <span id="acct-username"></span> !</h2>
+                <p>Manage your account information, orders, and preferences</p>
+            </div>
+
+            <!-- Profile Section -->
+            <div class="edit-profile" id="profile-section">
+                <h3>Edit Your Profile</h3>
+                <form id="profile-form" class="info-form">
+                    <div class="info-flex">
+                        <div class="str-flex">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" placeholder="First Name" required>
+                        </div>
+                        <div class="str-flex">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" placeholder="Last Name" required>
+                        </div>
+                    </div>
+                    <div class="info-flex">
+                        <div class="str-flex">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" placeholder="Email" required>
+                        </div>
+                        <div class="str-flex">
+                            <label for="address">Address</label>
+                            <input type="text" id="address" placeholder="Address" required>
+                        </div>
+                    </div>
+
+                    <div class="password-section">
+                        <label>Password Changes</label>
+                        <input type="password" id="currentPassword" placeholder="Current Password">
+                        <input type="password" id="newPassword" placeholder="New Password">
+                        <input type="password" id="confirmPassword" placeholder="Confirm New Password">
+                    </div>
+
+                    <div class="info-processing">
+                        <button type="submit" class="colored-btn">Save Changes</button>
+                        <button type="button" class="shadow-btn" onclick="window.location.href='/index.html'">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Address Section (Hidden by default) -->
+            <div class="edit-profile" id="address-section" style="display: none;">
+                <h3>Address Book</h3>
+                <div class="address-form">
+                    <div class="info-flex">
+                        <div class="str-flex">
+                            <input type="text" id="street-address" placeholder="Street Address">
+                        </div>
+                        <div class="str-flex">
+                            <input type="text" id="city" placeholder="City">
+                        </div>
+                    </div>
+                    <div class="info-flex">
+                        <div class="str-flex">
+                            <input type="text" id="state" placeholder="State">
+                        </div>
+                        <div class="str-flex">
+                            <input type="text" id="zip-code" placeholder="Zip Code">
+                        </div>
+                    </div>
+                    <div class="str-flex">
+                        <input type="text" id="country" placeholder="Country">
+                    </div>
+                    <div class="info-processing">
+                        <button class="colored-btn" onclick="saveAddress()">Save Address</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Section (Hidden by default) -->
+            <div class="edit-profile" id="payment-section" style="display: none;">
+                <h3>Payment Options</h3>
+                <div class="payment-form">
+                    <div class="info-flex">
+                        <div class="str-flex">
+                            <input type="text" id="card-number" placeholder="Card Number">
+                        </div>
+                        <div class="str-flex">
+                            <input type="text" id="card-name" placeholder="Card Holder Name">
+                        </div>
+                    </div>
+                    <div class="info-flex">
+                        <div class="str-flex">
+                            <input type="text" id="expiry-date" placeholder="Expiry Date (MM/YY)">
+                        </div>
+                        <div class="str-flex">
+                            <input type="text" id="cvv" placeholder="CVV">
+                        </div>
+                    </div>
+                    <div class="info-processing">
+                        <button class="colored-btn" onclick="savePayment()">Save Card</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Section (Hidden by default) -->
+            <div class="edit-profile" id="orders-section" style="display: none;">
+                <h3>My Orders</h3>
+                <div id="orders-list"></div>
             </div>
         </div>
-
-        <div class="str-flex">
-            <label for="currentPassword">Current Password</label>
-            <input type="password" id="currentPassword" placeholder="Current Password" required>
-
-            <input type="password" id="newPassword" placeholder="New Password" required>
-            <input type="password" id="confirmPassword" placeholder="Confirm New Password" required>
-        </div>
-
-        <div class="info-processing">
-            <a href="#">cancel</a>
-            <button type="submit" class="colored-btn">Save Changes</button>
-        </div>
-    </form>
-</div>
     </div>
   </main>
 
@@ -65,7 +149,7 @@
   <script src="/js/utils.js"></script>
   <script src="/js/cart.js"></script>
   <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
-  <script src="js/user.js"></script> 
+  <script src="/js/user.js"></script> 
   <script src="/js/index.js"></script>
   <script src="/js/account-page.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>

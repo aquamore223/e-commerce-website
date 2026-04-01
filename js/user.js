@@ -16,6 +16,9 @@ class AuthSystem {
         // Setup event listeners for auth forms
         this.setupAuthForms();
         
+        // Wait for header to load before updating UI
+        await this.waitForHeader();
+        
         // Update UI based on auth status
         this.updateUI();
         
@@ -26,21 +29,63 @@ class AuthSystem {
         document.addEventListener('authStatusChanged', () => {
             this.updateUI();
         });
+        
+        // Listen for header load event
+        document.addEventListener('headerLoaded', () => {
+            console.log("Header loaded event received, updating UI");
+            this.updateUI();
+        });
+    }
+
+    async waitForHeader() {
+        // Check if header is already loaded
+        const header = document.getElementById('header');
+        if (header && header.innerHTML && !header.innerHTML.includes('loading')) {
+            console.log("Header already loaded");
+            return;
+        }
+        
+        // Wait for header to be loaded
+        console.log("Waiting for header to load...");
+        return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+                const header = document.getElementById('header');
+                if (header && header.innerHTML && !header.innerHTML.includes('loading')) {
+                    clearInterval(checkInterval);
+                    console.log("Header loaded");
+                    resolve();
+                }
+            }, 100);
+            
+            // Timeout after 3 seconds
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                console.log("Header load timeout, proceeding anyway");
+                resolve();
+            }, 3000);
+        });
     }
 
     async checkAuthStatus() {
         try {
             // Check if there's a valid auth token
             if (this.pb && this.pb.authStore.isValid) {
-                // Fetch fresh user data from your custom collection
+                // Fetch fresh user data from your custom collection with auto-cancel disabled
                 const userId = this.pb.authStore.model?.id;
                 if (userId) {
-                    const userRecord = await this.pb.collection(this.COLLECTION_NAME).getOne(userId);
-                    this.currentUser = userRecord;
+                    try {
+                        const userRecord = await this.pb.collection(this.COLLECTION_NAME).getOne(userId, {
+                            $autoCancel: false  // Prevent auto-cancellation
+                        });
+                        this.currentUser = userRecord;
+                        console.log("User loaded:", this.currentUser?.name || this.currentUser?.email);
+                    } catch (error) {
+                        console.error("Error fetching user:", error);
+                        this.currentUser = null;
+                    }
                 } else {
                     this.currentUser = null;
                 }
-                console.log("User logged in:", this.currentUser?.name || this.currentUser?.email);
                 return true;
             } else {
                 this.currentUser = null;
@@ -55,7 +100,6 @@ class AuthSystem {
 
     async signup(name, email, password) {
         try {
-            // Create new user in PocketBase using your custom collection
             const userData = {
                 name: name,
                 email: email,
@@ -66,10 +110,11 @@ class AuthSystem {
             
             console.log("Attempting signup with:", { name, email });
             
-            const user = await this.pb.collection(this.COLLECTION_NAME).create(userData);
+            const user = await this.pb.collection(this.COLLECTION_NAME).create(userData, {
+                $autoCancel: false
+            });
             console.log("User created:", user);
             
-            // Auto login after signup
             await this.login(email, password);
             
             return { success: true, user: user };
@@ -81,14 +126,15 @@ class AuthSystem {
 
     async login(email, password) {
         try {
-            // Authenticate user with your custom collection
-            const authData = await this.pb.collection(this.COLLECTION_NAME).authWithPassword(email, password);
+            const authData = await this.pb.collection(this.COLLECTION_NAME).authWithPassword(email, password, {
+                $autoCancel: false
+            });
             this.currentUser = authData.record;
             
-            // Force UI update immediately
+            // Wait for header then update UI
+            await this.waitForHeader();
             this.updateUI();
             
-            // Dispatch event for other components
             document.dispatchEvent(new CustomEvent('authStatusChanged', { 
                 detail: { isLoggedIn: true, user: this.currentUser }
             }));
@@ -105,15 +151,12 @@ class AuthSystem {
             this.pb.authStore.clear();
             this.currentUser = null;
             
-            // Force UI update immediately
             this.updateUI();
             
-            // Dispatch event for other components
             document.dispatchEvent(new CustomEvent('authStatusChanged', { 
                 detail: { isLoggedIn: false, user: null }
             }));
             
-            // Redirect to home page
             window.location.href = "/index.html";
             return { success: true };
         } catch (error) {
@@ -123,7 +166,6 @@ class AuthSystem {
     }
 
     setupLogoutHandler() {
-        // Find logout button and attach event
         document.addEventListener('click', (e) => {
             const logoutBtn = e.target.closest('#logout-btn, .logout-btn, [data-logout]');
             if (logoutBtn) {
@@ -134,7 +176,6 @@ class AuthSystem {
     }
 
     setupAuthForms() {
-        // Get form elements
         const signupForm = document.getElementById("signup-form-element");
         const signinForm = document.getElementById("signin-form-element");
         const signupContainer = document.getElementById("signup-form");
@@ -142,14 +183,6 @@ class AuthSystem {
         const showSignin = document.getElementById("show-signin");
         const showSignup = document.getElementById("show-signup");
         
-        console.log("Forms found:", { 
-            signupForm: !!signupForm, 
-            signinForm: !!signinForm,
-            signupContainer: !!signupContainer,
-            signinContainer: !!signinContainer
-        });
-        
-        // Toggle between signup and signin forms
         if (showSignin) {
             showSignin.addEventListener("click", () => {
                 if (signupContainer) signupContainer.style.display = "none";
@@ -164,18 +197,13 @@ class AuthSystem {
             });
         }
         
-        // Signup form submission
         if (signupForm) {
             signupForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
-                console.log("Signup form submitted");
                 
-                // Get values using IDs
                 const name = document.getElementById("signup-name")?.value;
                 const email = document.getElementById("signup-email")?.value;
                 const password = document.getElementById("signup-password")?.value;
-                
-                console.log("Signup values:", { name, email, password: password ? "***" : "empty" });
                 
                 if (!name || !email || !password) {
                     alert("Please fill in all fields");
@@ -191,21 +219,14 @@ class AuthSystem {
                     alert("Signup failed: " + result.error);
                 }
             });
-        } else {
-            console.error("Signup form element with id 'signup-form-element' not found!");
         }
         
-        // Signin form submission
         if (signinForm) {
             signinForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
-                console.log("Signin form submitted");
                 
-                // Get values using IDs
                 const email = document.getElementById("login-email")?.value;
                 const password = document.getElementById("login-password")?.value;
-                
-                console.log("Signin values:", { email, password: password ? "***" : "empty" });
                 
                 if (!email || !password) {
                     alert("Please fill in all fields");
@@ -216,7 +237,6 @@ class AuthSystem {
                 
                 if (result.success) {
                     alert("Login successful!");
-                    // Don't redirect immediately, let the UI update first
                     setTimeout(() => {
                         window.location.href = "/index.html";
                     }, 500);
@@ -224,11 +244,8 @@ class AuthSystem {
                     alert("Login failed: " + result.error);
                 }
             });
-        } else {
-            console.error("Signin form element with id 'signin-form-element' not found!");
         }
         
-        // Fix password autocomplete warnings
         const passwordInputs = document.querySelectorAll("input[type='password']");
         passwordInputs.forEach((input) => {
             if (!input.hasAttribute("autocomplete")) {
@@ -242,56 +259,45 @@ class AuthSystem {
     }
 
     updateUI() {
-        console.log("Updating UI - Current user:", this.currentUser);
+        console.log("Updating UI - Current user:", this.currentUser?.name || this.currentUser?.email || 'not logged in');
         
-        // Find the user icon element - using the correct selector for your header
         const userIcon = document.querySelector('.user-icon');
         const loginLink = document.querySelector('.login-link');
         
         console.log("Elements found:", { 
             userIcon: !!userIcon, 
             loginLink: !!loginLink,
-            userIconDisplay: userIcon ? window.getComputedStyle(userIcon).display : 'not found',
-            loginLinkDisplay: loginLink ? window.getComputedStyle(loginLink).display : 'not found'
+            page: window.location.pathname
         });
         
         if (this.currentUser) {
-            // User is logged in - SHOW the user icon, HIDE login link
             if (userIcon) {
                 userIcon.style.display = "block";
                 userIcon.style.visibility = "visible";
                 userIcon.style.opacity = "1";
-                // Make sure it's visible
                 userIcon.classList.add('logged-in');
+                console.log("✅ User icon shown");
             } else {
-                console.warn("User icon element not found in DOM!");
+                console.warn("⚠️ User icon element not found!");
             }
             
             if (loginLink) {
                 loginLink.style.display = "none";
+                console.log("Login link hidden");
             }
-            
-            // Update user name in dropdown if exists
-            const userNameSpan = document.querySelector('.user-name');
-            if (userNameSpan && this.currentUser.name) {
-                userNameSpan.textContent = this.currentUser.name;
-            }
-            
-            console.log("UI updated: User icon shown, login link hidden");
         } else {
-            // User is NOT logged in - HIDE user icon, SHOW login link
             if (userIcon) {
                 userIcon.style.display = "none";
                 userIcon.style.visibility = "hidden";
                 userIcon.style.opacity = "0";
                 userIcon.classList.remove('logged-in');
+                console.log("User icon hidden");
             }
             
             if (loginLink) {
                 loginLink.style.display = "flex";
+                console.log("Login link shown");
             }
-            
-            console.log("UI updated: User icon hidden, login link shown");
         }
     }
 
@@ -308,7 +314,6 @@ class AuthSystem {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM loaded, initializing auth...");
     
-    // Wait for PocketBase to be ready
     const checkPB = setInterval(() => {
         if (window.pb) {
             clearInterval(checkPB);
@@ -317,7 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 100);
     
-    // Fallback after 3 seconds
     setTimeout(() => {
         clearInterval(checkPB);
         if (!window.authSystem && window.pb) {
@@ -327,10 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3000);
 });
 
-// Also check on page load for existing session
+// Also check when page is fully loaded
 window.addEventListener('load', () => {
+    console.log("Window loaded");
     if (window.authSystem) {
-        window.authSystem.updateUI();
+        setTimeout(() => {
+            window.authSystem.updateUI();
+        }, 200);
     }
 });
 
