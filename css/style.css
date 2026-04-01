@@ -4,8 +4,11 @@
     box-sizing: border-box;
     font-family:poppins, sans-serif;
     scroll-behavior: smooth;
-    text-transform: capitalize;
+
+     
 }
+
+
      
 :root{
     --primary-color: #131211;
@@ -149,32 +152,63 @@ i {
 .search-result-item:hover {
     background: #fafafa;
 }
-.user-icon svg:hover{
-   color: var(--secondary-color);
+/* User Icon Display */
+.user-icon {
+    position: relative;
+    cursor: pointer;
+    display: none; /* Hidden by default, shown when logged in */
 }
-.user-icon ul{
+
+.user-icon.active,
+.user-icon[style*="block"] {
+    display: block !important;
+}
+
+/* Login Link */
+.login-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+.login-link:hover {
+    color: var(--secondary-color);
+}
+
+/* User dropdown */
+.user-icon ul {
     display: none !important;
     flex-direction: column;
-    position:absolute;
-    background: rgba(58, 57, 57, 0.7); 
+    position: absolute;
+    background: rgba(58, 57, 57, 0.95);
     backdrop-filter: blur(15px);
     border-radius: 10px;
-    z-index:1000;
-    padding: 20px 10px 10px 20px;
-    right: 150px;
-    gap:2px;
+    z-index: 1000;
+    padding: 15px;
+    right: 0;
+    top: 100%;
+    min-width: 200px;
 }
+
 .user-icon ul.active {
-  display: flex !important;
+    display: flex !important;
 }
-.user-icon ul li a{
+
+.user-icon ul li a {
     display: flex;
     align-items: center;
     color: white;
-    gap:15px;
-    padding:5px;
+    gap: 12px;
+    padding: 8px 12px;
+    text-decoration: none;
+    transition: color 0.3s;
 }
-.user-icon ul li:hover{
+
+.user-icon ul li:hover a {
     color: var(--secondary-color);
 }
 .nav a {
@@ -476,6 +510,7 @@ i {
     transform:scale(1.03);
 }
 
+
 .scroll-img-section img{
     object-fit:contain;
     width:100%;
@@ -631,12 +666,17 @@ color: white;
     scroll-snap-type: x mandatory;
 
 }
+ 
 
 .scroll {
     scroll-snap-align: start;  
     flex: 0 0 auto ; 
     transition: transform 0.3s ease;
        
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background-color: var(--secondary-color);
 }
 #salesCounter{
     color: grey;
@@ -1476,6 +1516,7 @@ color: white;
                    /* log pages_*/
 
 .log-main{
+    text-transform: none;
     display: flex;
 }
 .log-main-img img {

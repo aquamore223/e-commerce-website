@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>signup-page</title>
+    <title>Sign Up - Exclusive</title>
     <link rel="stylesheet" href="../css/style.css">
-     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"  />
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
@@ -14,54 +14,51 @@
     <header id="header"></header>
     <div class="log-main">
 
-      <div class="log-main-img">
-        <img src="../images/dl.beatsnoop 1.jpg" alt="">
-      </div>
+        <div class="log-main-img">
+            <img src="../images/dl.beatsnoop 1.jpg" alt="Sign up illustration">
+        </div>
 
-      <div id="signup-form" class="log-main-form"  >
-        <form action="">
-          <h1>create an account</h1>
-          <h5>Enter your details below</h5>
-          <label for="name"></label>
-          <input type="text" placeholder="Name" autocomplete="name"> 
-          <label for="email or phone Number"></label>
-          <input type="text" placeholder="email or phone Number" autocomplete="number"> 
-          <label for="password"></label>
-          <input type="password" placeholder="password" autocomplete="password"> 
-          <button id="creatAccount" type="submit">Create Account</button>
-          <button id="googleSignup"> <img src="../images/google.png" alt="google image" >Sign up with Google</button>
-          <p>Already have account?<span id="show-signin">Sign In</span></p>
-        </form>
-      </div>
+        <div id="signup-form" class="log-main-form">
+            <form id="signup-form-element">
+                <h1>Create an account</h1>
+                <h5>Enter your details below</h5>
+                <input type="text" id="signup-name" name="name" placeholder="Name" required>
+                <input type="email" id="signup-email" name="email" placeholder="Email" required>
+                <input type="password" id="signup-password" name="password" placeholder="Password" required autocomplete="new-password">
+                <button type="submit" id="createAccount">Create Account</button>
+                <button type="button" id="googleSignup"> 
+                    <img src="../images/google.png" alt="google image"> Sign up with Google
+                </button>
+                <p>Already have account? <span id="show-signin">Sign In</span></p>
+            </form>
+        </div>
 
-
-
-      <div id="signin-form" class="log-main-form" style=" display : none ;">
-        <form action="">
-          <h1>Log in to Exclusive</h1>
-          <h5>Enter your details below</h5>
-          <label for="email or phone Number"></label>
-          <input type="text" placeholder="email or phone Number" required> 
-          <label for="password"></label>
-          <input type="password" placeholder="password" autocomplete="password" required> 
-           <div class="signup-flex">
-            <button type="submit">log in</button>
-             <a href="">Forget Password?</a>
-           </div>
-        </form>
-      </div>
+        <div id="signin-form" class="log-main-form" style="display: none;">
+            <form id="signin-form-element">
+                <h1>Log in to Exclusive</h1>
+                <h5>Enter your details below</h5>
+                <input type="email" id="login-email" name="email" placeholder="Email" required>
+                <input type="password" id="login-password" name="password" placeholder="Password" required autocomplete="current-password">
+                <div class="signup-flex">
+                    <button type="submit">Log In</button>
+                    <a href="#" id="forgot-password">Forgot Password?</a>
+                </div>
+                <p>Don't have an account? <span id="show-signup">Sign Up</span></p>
+            </form>
+        </div>
 
     </div>
 
-  <footer id="footer"></footer>
-  <script src="/js/utils.js"></script>
-  <script src="../js/cart.js"></script>
-  <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
-  <script src="../js/index.js"></script>
-  <script src="user.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-<script>
-  lucide.createIcons();
-</script>
+    <footer id="footer"></footer>
+    
+    <script src="/js/utils.js"></script>
+    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
+    <script src="/js/cart.js"></script>
+    <script src="/js/index.js"></script>
+    <script src="/js/user.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

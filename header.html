@@ -53,17 +53,27 @@
             <span class="cart-count">0</span>
             </a>
        </div>
-        <div class="user-icon">
-            <i data-lucide="circle-user-round"></i>  
-            <ul>
-                <li><a href="../user/account.html"><i data-lucide="user"></i> Manage My Account</a></li>
-                <li> <a href=""><i data-lucide="shopping-bag"></i>  My Order</a></li>
-                <li> <a href=""><i data-lucide="circle-x"></i> My Cancellations</a></li>
-                <li> <a href=""><i data-lucide="star"></i> My Reviews</a></li>
-                <li><a href=""><i data-lucide="log-out"></i> Logout</a></li>
-            </ul>
-        </div>
+        <a href="/user/signup.html" class="login-link" style="display: flex;">
+        <i data-lucide="log-in"></i>
+        <span>Login</span>
+    </a>
+    
+    <!-- User Icon (shown when logged in) -->
+    <div class="user-icon" style="display: none;">
+        <i data-lucide="circle-user-round"></i>  
+        <ul>
+            <li><a href="../user/account.html"><i data-lucide="user"></i> Manage My Account</a></li>
+            <li><a href=""><i data-lucide="shopping-bag"></i> My Order</a></li>
+            <li><a href=""><i data-lucide="circle-x"></i> My Cancellations</a></li>
+            <li><a href=""><i data-lucide="star"></i> My Reviews</a></li>
+            <li><a href="#" id="logout-btn"><i data-lucide="log-out"></i> Logout</a></li>
+        </ul>
+    </div>
+    
         <div id="menu-icon" class="bx bx-menu"  style="font-size:30px;"></div>
        
     </div>
 </div>
+
+
+<script src="/js/user.js"></script> 
