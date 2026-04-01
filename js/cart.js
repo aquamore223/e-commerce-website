@@ -8,7 +8,7 @@ class CartSystem {
       this.renderCheckout();
     });
 
-    /* ADD TO CART BUTTONS */
+    /* ADD TO CART BUTTONS - Updated to handle both regular and detailed adds */
     document.addEventListener("click", async (e) => {
       const btn = e.target.closest(".add-to-cart-btn");
       if (!btn) return;
@@ -16,7 +16,23 @@ class CartSystem {
       const id = btn.dataset.id;
       if (!id) return;
 
-      await this.addToCart(id);
+      // Check if there's additional data (color, size) stored on the button
+      const color = btn.dataset.color || null;
+      const size = btn.dataset.size || null;
+      const qty = parseInt(btn.dataset.qty) || 1;
+
+      if (color || size) {
+        // If we have color/size info, use the detailed method
+        await this.addToCartWithDetails({
+          id: id,
+          color: color,
+          size: size,
+          qty: qty
+        });
+      } else {
+        // Otherwise use regular method
+        await this.addToCart(id);
+      }
 
       const originalText = btn.textContent;
       btn.textContent = "✔ Added";
@@ -48,6 +64,7 @@ class CartSystem {
   }
 
   async addToCart(productId) {
+    // Try to get product from PocketBase first
     let product = null;
     
     if (window.pb) {
@@ -67,6 +84,7 @@ class CartSystem {
       }
     }
     
+    // Fallback to local products object
     if (!product && typeof products !== 'undefined' && products[productId]) {
       product = products[productId];
     }
@@ -89,6 +107,75 @@ class CartSystem {
 
     this.saveCart();
     this.renderCheckout();
+  }
+
+  // NEW METHOD: Add to cart with full details (color, size, quantity)
+  async addToCartWithDetails(item) {
+    if (!item || !item.id) return;
+    
+    console.log("Adding to cart with details:", item);
+    
+    // Try to get full product details if only ID was provided
+    let product = item;
+    
+    if (!item.name || !item.price) {
+      // Fetch product details from PocketBase
+      if (window.pb) {
+        try {
+          const pbProduct = await window.pb.collection("exclusive_ecommerce").getOne(item.id);
+          if (pbProduct) {
+            product = {
+              id: pbProduct.id,
+              name: pbProduct.name,
+              price: typeof pbProduct.price === 'number' ? pbProduct.price : parseFloat(pbProduct.price) || 0,
+              img: this.getProductImage(pbProduct),
+              oldPrice: pbProduct.oldPrice,
+              color: item.color,
+              size: item.size,
+              qty: item.qty || 1
+            };
+          }
+        } catch (error) {
+          console.error("Error fetching product for cart:", error);
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+    
+    // Check if item already exists in cart (with same color and size)
+    const existing = this.cart.find(cartItem => 
+      cartItem.id === product.id && 
+      cartItem.color === product.color && 
+      cartItem.size === product.size
+    );
+    
+    if (existing) {
+      existing.qty += (product.qty || 1);
+    } else {
+      this.cart.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        img: product.img,
+        color: product.color || null,
+        size: product.size || null,
+        qty: product.qty || 1
+      });
+    }
+    
+    this.saveCart();
+    this.renderCheckout();
+    
+    // Show notification with details
+    let details = [];
+    if (product.color) details.push(product.color);
+    if (product.size) details.push(product.size);
+    if (product.qty > 1) details.push(`Qty: ${product.qty}`);
+    
+    const detailsText = details.length ? ` (${details.join(', ')})` : '';
+    this.showCartNotification(`${product.name}${detailsText} added to cart!`);
   }
 
   getProductImage(product) {
@@ -139,12 +226,18 @@ class CartSystem {
     container.innerHTML = this.cart.map((item) => {
       const itemTotal = item.price * item.qty;
       subtotal += itemTotal;
+      
+      // Display color and size if available
+      let details = '';
+      if (item.color) details += `<span class="item-color">${item.color}</span>`;
+      if (item.size) details += `<span class="item-size">${item.size}</span>`;
+      if (details) details = `<span class="item-details"> (${details})</span>`;
 
       return `
-        <div class="cart-flex cart-item" data-id="${item.id}">
+        <div class="cart-flex cart-item" data-id="${item.id}" data-color="${item.color || ''}" data-size="${item.size || ''}">
           <div id="cart-pic-section">
             <img src="${item.img}" width="50" onerror="this.src='/images/placeholder.jpg'">
-            <p>${item.name} <span class="cart-qty">x${item.qty}</span></p>
+            <p>${item.name}${details} <span class="cart-qty">x${item.qty}</span></p>
           </div>
           <p>$${itemTotal.toFixed(2)}</p>
         </div>
@@ -165,6 +258,31 @@ class CartSystem {
         <p>$${subtotal.toFixed(2)}</p>
       </div>
     `;
+  }
+
+  showCartNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'cart-notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #4CAF50;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => notification.remove(), 300);
+    }, 2000);
   }
 }
 

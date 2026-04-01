@@ -305,23 +305,33 @@ window.addEventListener("load", () => {
 // ==================== LOAD CATEGORY LINKS ====================
 async function loadCategoryLinks() {
     try {
-        // Fetch all products from PocketBase
-        const products = await window.pb.collection("exclusive_ecommerce").getFullList();
+        // Check if PocketBase is available
+        if (!window.pb) {
+            console.log("PocketBase not available, using static categories");
+            loadStaticCategoryLinks();
+            return;
+        }
         
-        // Get unique categories
+        // Fetch products with auto-cancel disabled
+        const products = await window.pb.collection("exclusive_ecommerce").getFullList({
+            $autoCancel: false,
+            limit: 100
+        });
+        
+        // Get unique categories from products
         const uniqueCategories = [...new Set(products.map(p => p.category).filter(c => c))];
         
         // Define category display names and their corresponding filter values
         const categoryMap = [
-            { display: "Woman's Fashion", filter: "Fashion" },
-            { display: "Men's Fashion", filter: "Fashion" },
-            { display: "Electronics", filter: "Electronics" },
-            { display: "Home & Lifestyle", filter: "Home & Lifestyle" },
-            { display: "Medicine", filter: "Medicine" },
-            { display: "Sports & Outdoor", filter: "Sports & Outdoor" },
-            { display: "Baby's & Toys", filter: "Baby's & Toys" },
-            { display: "Groceries & Pets", filter: "Groceries & Pets" },
-            { display: "Health & Beauty", filter: "Health & Beauty" }
+            { display: "Woman's Fashion", filter: "Fashion", hasIcon: true },
+            { display: "Men's Fashion", filter: "Fashion", hasIcon: true },
+            { display: "Electronics", filter: "Electronics", hasIcon: false },
+            { display: "Home & Lifestyle", filter: "Home & Lifestyle", hasIcon: false },
+            { display: "Medicine", filter: "Medicine", hasIcon: false },
+            { display: "Sports & Outdoor", filter: "Sports & Outdoor", hasIcon: false },
+            { display: "Baby's & Toys", filter: "Baby's & Toys", hasIcon: false },
+            { display: "Groceries & Pets", filter: "Groceries & Pets", hasIcon: false },
+            { display: "Health & Beauty", filter: "Health & Beauty", hasIcon: false }
         ];
         
         const container = document.querySelector(".exclusive-text ul");
@@ -330,7 +340,7 @@ async function loadCategoryLinks() {
         container.innerHTML = categoryMap.map(cat => `
             <li>
                 <a href="product-category.html?category=${encodeURIComponent(cat.filter)}">${cat.display}</a>
-                ${cat.display.includes("Fashion") ? `<i data-lucide="chevron-right" class="chev-icon"></i>` : ''}
+                ${cat.hasIcon ? `<i data-lucide="chevron-right" class="chev-icon"></i>` : ''}
             </li>
         `).join("");
         
@@ -338,10 +348,12 @@ async function loadCategoryLinks() {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
+        
+        console.log("✅ Category links loaded successfully");
+        
     } catch (error) {
         console.error("Error loading categories:", error);
-        
-        // Fallback static categories if PocketBase fails
+        // Fallback to static categories if PocketBase fails
         loadStaticCategoryLinks();
     }
 }
@@ -372,9 +384,11 @@ function loadStaticCategoryLinks() {
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+    
+    console.log("✅ Static category links loaded");
 }
 
-// Call this function when DOM is ready
+// Initialize categories when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     // Wait for PocketBase to be available
     const checkPB = setInterval(() => {
@@ -384,23 +398,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 100);
     
-    // Fallback after 3 seconds
+    // Fallback after 3 seconds - load static categories if PocketBase not available
     setTimeout(() => {
         clearInterval(checkPB);
         if (!window.pb) {
+            console.log("PocketBase not loaded after 3 seconds, using static categories");
             loadStaticCategoryLinks();
         }
     }, 3000);
 });
-
 // ==================== DYNAMIC SLIDER ====================
 
 class DynamicSlider {
-    constructor() {
+   constructor() {
         this.slides = [];
         this.currentIndex = 0;
         this.autoPlayInterval = null;
-        this.autoPlayDelay = 5000; // 5 seconds
+        this.autoPlayDelay = 5000;
         
         this.sliderContainer = document.querySelector('.slider');
         this.sliderNav = document.querySelector('.slider-nav');
@@ -421,10 +435,11 @@ class DynamicSlider {
     
     async loadSlides() {
         try {
-            // Fetch slides from PocketBase
+            // Add $autoCancel: false to prevent auto-cancellation
             const result = await window.pb.collection("slider_slides").getFullList({
                 sort: 'order',
-                filter: 'active = true'
+                filter: 'active = true',
+                $autoCancel: false  // Add this
             });
             
             this.slides = result.map(slide => this.formatSlide(slide));
@@ -432,7 +447,6 @@ class DynamicSlider {
             
         } catch (error) {
             console.error("Error loading slides:", error);
-            // Fallback to default slides if no data in PocketBase
             this.loadDefaultSlides();
         }
     }

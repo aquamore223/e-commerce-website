@@ -100,6 +100,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------- COLORS ----------------
+    let selectedColor = null;
     const colorsContainer = document.querySelector(".product-colors");
     if (colorsContainer && product.colors && product.colors.length > 0) {
       colorsContainer.innerHTML = "<p>Colour:</p>";
@@ -109,8 +110,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         input.type = "radio";
         input.name = "color";
         input.id = inputId;
+        input.value = color.name;
         input.dataset.img = color.img || product.img;
-        if (idx === 0) input.checked = true;
+        if (idx === 0) {
+          input.checked = true;
+          selectedColor = color.name;
+        }
 
         const label = document.createElement("label");
         label.setAttribute("for", inputId);
@@ -122,6 +127,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         colorsContainer.appendChild(label);
 
         input.addEventListener("change", () => {
+          selectedColor = input.value;
           if (heroImg && input.dataset.img) {
             heroImg.src = input.dataset.img;
           }
@@ -130,6 +136,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------- SIZES ----------------
+    let selectedSize = null;
     const sizesContainer = document.querySelector(".sizes");
     if (sizesContainer && product.sizes && product.sizes.length > 0) {
       sizesContainer.innerHTML = "";
@@ -140,7 +147,10 @@ window.addEventListener("DOMContentLoaded", async () => {
         input.name = "size";
         input.id = inputId;
         input.value = size;
-        if (idx === 0) input.checked = true;
+        if (idx === 0) {
+          input.checked = true;
+          selectedSize = size;
+        }
 
         const label = document.createElement("label");
         label.setAttribute("for", inputId);
@@ -148,6 +158,10 @@ window.addEventListener("DOMContentLoaded", async () => {
 
         sizesContainer.appendChild(input);
         sizesContainer.appendChild(label);
+
+        input.addEventListener("change", () => {
+          selectedSize = input.value;
+        });
       });
     }
 
@@ -155,41 +169,100 @@ window.addEventListener("DOMContentLoaded", async () => {
     const minus = document.querySelector(".prod-no button:first-child");
     const plus = document.querySelector(".prod-no button:last-child");
     const inputQty = document.querySelector(".prod-no input");
+    let quantity = 1;
 
     if (plus && minus && inputQty) {
       plus.onclick = () => {
         let val = parseInt(inputQty.value) || 1;
         inputQty.value = val + 1;
+        quantity = val + 1;
       };
       minus.onclick = () => {
         let val = parseInt(inputQty.value) || 1;
-        if (val > 1) inputQty.value = val - 1;
+        if (val > 1) {
+          inputQty.value = val - 1;
+          quantity = val - 1;
+        }
       };
+      inputQty.addEventListener("change", () => {
+        let val = parseInt(inputQty.value) || 1;
+        if (val < 1) val = 1;
+        inputQty.value = val;
+        quantity = val;
+      });
+      quantity = parseInt(inputQty.value) || 1;
     }
 
-    // ---------------- ADD TO CART BUTTON ----------------
+    // ---------------- ADD TO CART BUTTON WITH FULL DETAILS ----------------
     const addToCartBtn = document.querySelector(".add-to-cart-btn");
     if (addToCartBtn) {
-      addToCartBtn.dataset.id = product.id;
+      // Remove existing listeners
+      const newAddToCartBtn = addToCartBtn.cloneNode(true);
+      addToCartBtn.parentNode.replaceChild(newAddToCartBtn, addToCartBtn);
+      
+      newAddToCartBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        
+        // Get selected options
+        const selectedColorElem = document.querySelector('input[name="color"]:checked');
+        const selectedSizeElem = document.querySelector('input[name="size"]:checked');
+        
+        const color = selectedColorElem ? selectedColorElem.value : null;
+        const size = selectedSizeElem ? selectedSizeElem.value : null;
+        const qty = parseInt(document.querySelector(".prod-no input")?.value) || 1;
+        
+        // Create cart item with all details
+        const cartItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          img: heroImg ? heroImg.src : product.img,
+          color: color,
+          size: size,
+          qty: qty,
+          totalPrice: product.price * qty
+        };
+        
+        console.log("Adding to cart:", cartItem);
+        
+        // Add to cart system
+        if (window.cartSystem) {
+          await window.cartSystem.addToCartWithDetails(cartItem);
+          
+          // Show button feedback
+          const originalText = newAddToCartBtn.innerHTML;
+          newAddToCartBtn.innerHTML = '<i data-lucide="check" width="14" height="14"></i> Added!';
+          newAddToCartBtn.classList.add("added");
+          newAddToCartBtn.style.background = "#4CAF50";
+          newAddToCartBtn.style.color = "white";
+          
+          setTimeout(() => {
+            newAddToCartBtn.innerHTML = originalText;
+            newAddToCartBtn.classList.remove("added");
+            newAddToCartBtn.style.background = "";
+            newAddToCartBtn.style.color = "";
+          }, 1500);
+          
+          showNotification(`${product.name} (${color ? color + ', ' : ''}${size ? size + ', ' : ''}Qty: ${qty}) added to cart!`, "success");
+        } else {
+          console.error("Cart system not found");
+          showNotification("Cart system not available", "error");
+        }
+      });
     }
 
-    // ================ HEART ICON (WISHLIST) - FIXED ================
+    // ---------------- HEART ICON (WISHLIST) ----------------
     const heartIconContainer = document.querySelector(".prod-like");
     if (heartIconContainer) {
-      // Set the product ID
       heartIconContainer.dataset.id = product.id;
       
-      // Find the existing heart icon (don't create a new one)
       let heartIcon = heartIconContainer.querySelector("i");
-      
-      // If no icon exists, create one (but this shouldn't happen if HTML is correct)
       if (!heartIcon) {
         heartIcon = document.createElement("i");
         heartIcon.setAttribute("data-lucide", "heart");
         heartIconContainer.appendChild(heartIcon);
       }
       
-      // Set initial heart state based on wishlist
       if (window.wishlistSystem) {
         const isWishlisted = window.wishlistSystem.isWishlisted(product.id);
         if (isWishlisted) {
@@ -199,11 +272,9 @@ window.addEventListener("DOMContentLoaded", async () => {
         }
       }
       
-      // Remove existing click listeners and add new one
       const newHeartContainer = heartIconContainer.cloneNode(true);
       heartIconContainer.parentNode.replaceChild(newHeartContainer, heartIconContainer);
       
-      // Add click handler for wishlist
       newHeartContainer.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -212,10 +283,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         if (!pid) return;
         
         if (window.wishlistSystem) {
-          // Toggle wishlist
           window.wishlistSystem.toggle(pid);
           
-          // Update the heart icon
           const icon = newHeartContainer.querySelector("i");
           if (icon) {
             if (window.wishlistSystem.isWishlisted(pid)) {
@@ -227,12 +296,10 @@ window.addEventListener("DOMContentLoaded", async () => {
             }
           }
           
-          // Update wishlist count in header
           if (window.wishlistSystem.updateCount) {
             window.wishlistSystem.updateCount();
           }
           
-          // Dispatch event for other components
           document.dispatchEvent(new CustomEvent('wishlistUpdated', { 
             detail: window.wishlistSystem.items 
           }));
@@ -247,7 +314,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         const relatedProducts = await window.pb.collection("exclusive_ecommerce").getFullList({
           filter: `category="${product.category}" && id != "${product.id}"`,
           sort: '-created',
-          limit: 4
+          limit: 4,
+          $autoCancel: false 
         });
         
         console.log(`Found ${relatedProducts.length} related products`);
