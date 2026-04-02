@@ -1,4 +1,4 @@
-// account-page.js - Fully dynamic account page with PocketBase integration
+
 
 // Account page initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -108,15 +108,87 @@ async function initAccountPage() {
         }
     }
     
+    function setupLogoutButton() {
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (!logoutBtn) return;
+
+    logoutBtn.addEventListener('click', () => {
+        try {
+            window.pb.authStore.clear();
+
+            if (window.authSystem) {
+                window.authSystem.currentUser = null;
+            }
+
+            alert('Logged out successfully');
+            window.location.href = "/user/signup.html";
+
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+    });
+}
     console.log("User logged in, loading account page...");
     await loadUserInfo();
     loadAccountSections();
     setupProfileForm();
     setupLogoutButton();
     setupActiveLinkHighlight();
+    showSectionFromHash();  
     
     // Show profile section by default
     showProfileSection();
+                if (window.location.hash) {
+                showSectionFromHash();
+            } else {
+                showProfileSection();
+            }
+            function showSectionFromHash() {
+                const hash = window.location.hash.substring(1);
+                if (!hash) return;
+
+    hideAllSections(); // ✅ hide everything first
+
+    switch (hash) {
+        case 'orders':
+            showOrdersSection('orders');
+            highlightSidebarLink('My Orders');
+            break;
+        case 'cancellations':
+            showOrdersSection('cancellations');
+            highlightSidebarLink('My Cancellations');
+            break;
+        case 'reviews':
+            showReviewsSection(); // create this if you have reviews
+            highlightSidebarLink('My Reviews');
+            break;
+        case 'profile':
+            showProfileSection();
+            highlightSidebarLink('My Profile');
+            break;
+        case 'address':
+            showAddressSection();
+            highlightSidebarLink('Address Book');
+            break;
+        case 'payment':
+            showPaymentSection();
+            highlightSidebarLink('My Payment Options');
+            break;
+    }
+}
+
+// Helper: highlight sidebar link
+function highlightSidebarLink(linkText) {
+    const links = document.querySelectorAll('.acct-details a');
+    links.forEach(l => {
+        if (l.textContent.includes(linkText)) {
+            l.classList.add('active');
+        } else {
+            l.classList.remove('active');
+        }
+    });
+}
 }
 
 // Setup active link highlighting
@@ -268,11 +340,13 @@ function hideAllSections() {
     const addressSection = document.getElementById('address-section');
     const paymentSection = document.getElementById('payment-section');
     const ordersSection = document.getElementById('orders-section');
+    const reviewsSection = document.getElementById('reviews-section');
     
     if (profileSection) profileSection.style.display = 'none';
     if (addressSection) addressSection.style.display = 'none';
     if (paymentSection) paymentSection.style.display = 'none';
     if (ordersSection) ordersSection.style.display = 'none';
+    if (reviewsSection) reviewsSection.style.display = 'none';
 }
 
 function showProfileSection() {
@@ -289,12 +363,19 @@ function showPaymentSection() {
     let paymentSection = document.getElementById('payment-section');
     paymentSection.style.display = 'block';
 }
+function showReviewsSection() {
+    hideAllSections();
+    const reviewsSection = document.getElementById('reviews-section');
+    if (reviewsSection) reviewsSection.style.display = 'block';
+}
 
 function showOrdersSection(type) {
+    hideAllSections();
     let ordersSection = document.getElementById('orders-section');
     ordersSection.style.display = 'block';
     loadOrders(type);
 }
+
 
 // Load orders
 function loadOrders(type) {
@@ -344,10 +425,9 @@ async function saveProfile() {
     const currentUser = window.authSystem?.getUser();
     if (!currentUser) {
         alert('Please login again');
-        window.location.href = "/user/signup.html";
         return;
     }
-    
+
     const currentPassword = document.getElementById('currentPassword')?.value;
     const newPassword = document.getElementById('newPassword')?.value;
     const confirmPassword = document.getElementById('confirmPassword')?.value;
@@ -358,65 +438,59 @@ async function saveProfile() {
 
     const updateData = {
         name: `${firstName} ${lastName}`.trim(),
-        email: email,
         address: address
     };
 
+    // ✅ Only update email if changed
+    if (email && email !== currentUser.email) {
+        updateData.email = email;
+    }
+
+    // ✅ Proper password update
     if (newPassword || confirmPassword) {
         if (!currentPassword) {
-            alert('Please enter your current password to change it.');
+            alert('Enter current password');
             return;
         }
-        
-        try {
-            await window.pb.collection("exclusive_users_collection").authWithPassword(currentUser.email, currentPassword);
-        } catch (error) {
-            alert('Current password is incorrect!');
-            return;
-        }
-        
+
         if (newPassword !== confirmPassword) {
-            alert('New password and confirm password do not match!');
+            alert('Passwords do not match');
             return;
         }
-        
+
         if (newPassword.length < 6) {
-            alert('New password must be at least 6 characters');
+            alert('Password must be at least 6 characters');
             return;
         }
-        
+
+        updateData.oldPassword = currentPassword;
         updateData.password = newPassword;
         updateData.passwordConfirm = newPassword;
     }
 
+    console.log("Sending updateData:", updateData);
+
     try {
-        const updatedUser = await window.pb.collection("exclusive_users_collection").update(currentUser.id, updateData);
+            const updatedUser = await window.pb
+            .collection("exclusive_users_collection")
+            .update(currentUser.id, updateData, {
+                $autoCancel: false
+            });
+
         window.authSystem.currentUser = updatedUser;
-        
+
         alert('Profile updated successfully!');
         await loadUserInfo();
-        
-        document.getElementById('currentPassword').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
-        
+
     } catch (error) {
-        console.error("Update error:", error);
-        alert('Error updating profile: ' + (error.message || 'Unknown error'));
+        console.error("Update error FULL:", error);
+
+        // 🔥 SHOW REAL ERROR
+        alert(error?.data?.message || error.message);
     }
 }
 
-function setupLogoutButton() {
-    const logoutLinks = document.querySelectorAll('#logout-btn, .logout-btn, a[href*="logout"]');
-    logoutLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (window.authSystem) {
-                window.authSystem.logout();
-            }
-        });
-    });
-}
+window.addEventListener('hashchange', showSectionFromHash);
 
 // Global functions for address/payment
 window.saveAddress = function() {
