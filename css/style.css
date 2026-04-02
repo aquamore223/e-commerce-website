@@ -664,6 +664,8 @@ color: white;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    
 
 }
  
@@ -713,6 +715,7 @@ color: white;
 }
 .cat-tabs{
     overflow-x: auto;
+    scrollbar-width: none;
 }
 .category-tabs a{
     text-decoration: none;
@@ -1609,8 +1612,15 @@ form p a {
     text-decoration: none;
     color: var(--secondary-color);
     font-weight: bold;
+    cursor: pointer;
 }
 
+#show-signin{
+    cursor: pointer;
+}
+#show-signup{
+    cursor: pointer;
+}
 @media(max-width :720px) {
     .log-main{
         flex-wrap: wrap;
@@ -2557,6 +2567,13 @@ form p a {
     gap: 20px;
     justify-content: center;
     margin-top:100px;
+    max-width:100%;
+    overflow: auto;
+    scrollbar-width: none;
+}
+
+.about-wrapper{
+    margin-left:20px ;
 }
 
 .about-wrapper-nav a {
