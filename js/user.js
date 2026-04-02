@@ -24,6 +24,12 @@ class AuthSystem {
             this.updateUI();
         });
         
+        // Also update when DOM changes (for dynamically loaded content)
+        const observer = new MutationObserver(() => {
+            this.updateUI();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        
         console.log("AuthSystem initialized");
     }
 
@@ -134,7 +140,7 @@ class AuthSystem {
     setupLogoutHandler() {
         // Use event delegation for logout button
         document.addEventListener('click', (e) => {
-            // Check for logout button by ID or class
+            // Check for logout button by ID or class or text content
             const logoutBtn = e.target.closest('#logout-btn, .logout-btn, [data-logout]');
             if (logoutBtn) {
                 e.preventDefault();
@@ -240,8 +246,42 @@ class AuthSystem {
             // Elements to update
             const userIcon = document.querySelector('.user-icon');
             const loginLink = document.querySelector('.login-link');
-            const signUpLink = document.querySelector('.menu ul li a[href="/user/signup.html"]');
-            const signUpListItem = signUpLink?.closest('li');
+            
+            // Find Sign Up link - multiple possible selectors
+            let signUpLink = null;
+            let signUpListItem = null;
+            
+            // Try different selectors to find the Sign Up link
+            const possibleSelectors = [
+                '.menu ul li a[href="/user/signup.html"]',
+                '.menu ul li a[href*="signup"]',
+                '.menu ul li a:contains("Sign Up")',
+                'a[href="/user/signup.html"]',
+                'a[href*="signup"]'
+            ];
+            
+            // Try to find by href
+            const allLinks = document.querySelectorAll('.menu ul li a');
+            for (const link of allLinks) {
+                const href = link.getAttribute('href');
+                if (href && (href.includes('signup') || href.includes('signup.html'))) {
+                    signUpLink = link;
+                    signUpListItem = link.closest('li');
+                    break;
+                }
+            }
+            
+            // Also try by text content
+            if (!signUpLink) {
+                const allNavLinks = document.querySelectorAll('.menu ul li');
+                for (const li of allNavLinks) {
+                    if (li.textContent.trim().toLowerCase() === 'sign up') {
+                        signUpListItem = li;
+                        signUpLink = li.querySelector('a');
+                        break;
+                    }
+                }
+            }
             
             if (userIcon || loginLink) {
                 if (this.currentUser) {
@@ -260,7 +300,7 @@ class AuthSystem {
                     // Hide Sign Up link in nav menu
                     if (signUpListItem) {
                         signUpListItem.style.display = "none";
-                        console.log("Sign Up link hidden");
+                        console.log("✅ Sign Up link hidden");
                     }
                 } else {
                     // User is NOT logged in
@@ -278,9 +318,9 @@ class AuthSystem {
                         console.log("Sign Up link shown");
                     }
                 }
-            } else if (retries < 5) {
-                console.log(`Elements not found, retry ${retries + 1}/5`);
-                setTimeout(() => updateElements(retries + 1), 100);
+            } else if (retries < 10) {
+                console.log(`Elements not found, retry ${retries + 1}/10`);
+                setTimeout(() => updateElements(retries + 1), 200);
             }
         };
         
@@ -326,7 +366,7 @@ window.addEventListener('load', () => {
     if (window.authSystem) {
         setTimeout(() => {
             window.authSystem.updateUI();
-        }, 100);
+        }, 200);
     }
 });
 
