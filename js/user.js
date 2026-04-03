@@ -1,4 +1,4 @@
-// user.js - Auth System (FIXED FORM SWITCHING + STABLE)
+// user.js - Auth System (FIXED FORM SWITCHING + STABLE + HASH NAVIGATION)
 
 class AuthSystem {
     constructor() {
@@ -19,8 +19,10 @@ class AuthSystem {
 
             this.cacheDOM();
             this.setupAuthForms();
-            this.setupFormSwitching(); // ✅ FIXED HERE
+            this.setupFormSwitching();
             this.setupGlobalLogout();
+            this.setupLoginLink(); // Handle login link click
+            this.handleHashNavigation(); // Handle #login hash
 
             this.updateUI();
 
@@ -66,6 +68,42 @@ class AuthSystem {
             );
     }
 
+    // ==================== HANDLE HASH NAVIGATION ====================
+    handleHashNavigation() {
+        // Check if coming from login link with #login hash
+        if (window.location.hash === '#login') {
+            this.cacheDOM();
+            if (this.dom.signupContainer) this.dom.signupContainer.style.display = "none";
+            if (this.dom.signinContainer) this.dom.signinContainer.style.display = "flex";
+            console.log("🔁 Hash navigation: Showing SIGN IN form");
+            
+            // Remove the hash from URL without refreshing
+            history.pushState("", document.title, window.location.pathname + window.location.search);
+        }
+    }
+
+    // ==================== SETUP LOGIN LINK ====================
+    setupLoginLink() {
+        const loginLink = document.querySelector('.login-link');
+        if (loginLink) {
+            loginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Check if we're on the signup page
+                if (window.location.pathname.includes('signup.html')) {
+                    // If on signup page, just switch to sign-in form
+                    this.cacheDOM();
+                    if (this.dom.signupContainer) this.dom.signupContainer.style.display = "none";
+                    if (this.dom.signinContainer) this.dom.signinContainer.style.display = "flex";
+                    console.log("🔁 Login link: Switched to SIGN IN form");
+                } else {
+                    // If on another page, redirect to signup page with login hash
+                    window.location.href = '/user/signup.html#login';
+                }
+            });
+        }
+    }
+
     // ==================== ERROR FORMAT ====================
     formatError(err) {
         if (err?.data) {
@@ -76,34 +114,33 @@ class AuthSystem {
 
     // ==================== AUTH CHECK ====================
     async checkAuthStatus() {
-    try {
-        if (this.pb?.authStore?.isValid) {
-            const userId = this.pb.authStore.model?.id;
+        try {
+            if (this.pb?.authStore?.isValid) {
+                const userId = this.pb.authStore.model?.id;
 
-            if (userId) {
-                this.currentUser = await this.pb
-                    .collection(this.COLLECTION_NAME)
-                    .getOne(userId, {
-                        $autoCancel: false // ✅ FIX
-                    });
+                if (userId) {
+                    this.currentUser = await this.pb
+                        .collection(this.COLLECTION_NAME)
+                        .getOne(userId, {
+                            $autoCancel: false
+                        });
 
-                console.log("👤 Auth loaded:", this.currentUser?.email);
+                    console.log("👤 Auth loaded:", this.currentUser?.email);
+                }
+            } else {
+                this.currentUser = null;
             }
-        } else {
-            this.currentUser = null;
-        }
-    } catch (err) {
-        console.error("Auth check error:", err);
+        } catch (err) {
+            console.error("Auth check error:", err);
 
-        // ✅ fallback (VERY IMPORTANT)
-        if (this.pb?.authStore?.model) {
-            this.currentUser = this.pb.authStore.model;
-            console.log("⚠️ Using fallback authStore user");
-        } else {
-            this.currentUser = null;
+            if (this.pb?.authStore?.model) {
+                this.currentUser = this.pb.authStore.model;
+                console.log("⚠️ Using fallback authStore user");
+            } else {
+                this.currentUser = null;
+            }
         }
     }
-}
 
     // ==================== SIGNUP ====================
     async signup(name, email, password) {
@@ -164,22 +201,21 @@ class AuthSystem {
     }
 
     // ==================== GLOBAL LOGOUT ====================
-  setupGlobalLogout() {
-    document.addEventListener('click', (e) => {
-        const logoutEl = e.target.closest(
-            '#logout-btn, .logout-btn, [data-logout]'
-        );
+    setupGlobalLogout() {
+        document.addEventListener('click', (e) => {
+            const logoutEl = e.target.closest(
+                '#logout-btn, .logout-btn, [data-logout]'
+            );
 
-        if (logoutEl) {
-            e.preventDefault();
-            e.stopPropagation();  
+            if (logoutEl) {
+                e.preventDefault();
+                e.stopPropagation();  
+                this.logout();
+            }
+        }, true);  
+    }
 
-            this.logout();
-        }
-    }, true);  
-}
-
-    // ====================  FIXED FORM SWITCHING ====================
+    // ==================== FIXED FORM SWITCHING ====================
     setupFormSwitching() {
         document.addEventListener('click', (e) => {
             const showSignin = e.target.closest('#show-signin');
