@@ -160,6 +160,56 @@ class AuthSystem {
             return { success: false, error: this.formatError(err) };
         }
     }
+                       // redirect function
+        handleRedirectAfterLogin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let redirectUrl = urlParams.get('redirect');
+            
+            if (!redirectUrl) {
+                redirectUrl = sessionStorage.getItem('redirectAfterCheckout');
+            }
+            
+            if (redirectUrl && this.isLoggedIn()) {
+                sessionStorage.removeItem('redirectAfterCheckout');
+                window.location.href = decodeURIComponent(redirectUrl);
+                return true;
+            }
+            return false;
+        }
+
+  // Update your login method
+    async login(email, password) {
+        try {
+            const auth = await this.pb.collection(this.COLLECTION_NAME)
+                .authWithPassword(email, password);
+
+            this.currentUser = auth.record;
+            sessionStorage.setItem('userLoggedIn', 'true');
+            this.updateUI();
+
+            document.dispatchEvent(new CustomEvent('authStatusChanged', {
+                detail: { isLoggedIn: true }
+            }));
+
+            // Handle redirect after login
+            const urlParams = new URLSearchParams(window.location.search);
+            let redirectUrl = urlParams.get('redirect');
+            
+            if (!redirectUrl) {
+                redirectUrl = sessionStorage.getItem('redirectAfterCheckout');
+            }
+            
+            if (redirectUrl) {
+                sessionStorage.removeItem('redirectAfterCheckout');
+                window.location.href = decodeURIComponent(redirectUrl);
+            }
+
+            return { success: true };
+
+        } catch (err) {
+            return { success: false, error: this.formatError(err) };
+        }
+    }
 
     // ==================== LOGIN ====================
     async login(email, password) {
@@ -317,6 +367,26 @@ class AuthSystem {
     }
 }
 
+    (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectUrl = urlParams.get('redirect');
+            const showLogin = urlParams.get('show') === 'login';
+            
+            // Store redirect URL for after login
+            if (redirectUrl) {
+                sessionStorage.setItem('redirectAfterCheckout', redirectUrl);
+            }
+            
+            // Show login form if requested
+            if (showLogin) {
+                const signupDiv = document.getElementById('signup-form');
+                const signinDiv = document.getElementById('signin-form');
+                if (signupDiv && signinDiv) {
+                    signupDiv.style.display = 'none';
+                    signinDiv.style.display = 'flex';
+                }
+            }
+        })();
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
     window.authSystem = new AuthSystem();

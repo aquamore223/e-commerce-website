@@ -515,3 +515,49 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 console.log("✅ Cart.js loaded successfully");
+
+/* ---------------- CHECKOUT AUTHENTICATION CHECK ---------------- */
+
+// Function to check if user is logged in before checkout
+function checkAuthBeforeCheckout() {
+    // Check if user is logged in via authSystem
+    if (window.authSystem && window.authSystem.isLoggedIn()) {
+        // User is logged in, proceed to checkout
+        window.location.href = "/order&payment/checkout.html";
+        return true;
+    } else {
+        // User is not logged in, redirect to signup page with return URL
+        const returnUrl = encodeURIComponent(window.location.href);
+        window.location.href = `/user/signup.html?redirect=${returnUrl}&show=login`;
+        return false;
+    }
+}
+
+// Add event listener for checkout buttons after DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // For the checkout button in cart page
+    const checkoutBtn = document.querySelector('.checkout-btn, .gen-btn:has(a[href*="checkout"])');
+    if (checkoutBtn) {
+        // Remove existing click handler and add new one
+        const newCheckoutBtn = checkoutBtn.cloneNode(true);
+        checkoutBtn.parentNode.replaceChild(newCheckoutBtn, checkoutBtn);
+        
+        newCheckoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            checkAuthBeforeCheckout();
+        });
+    }
+    
+    // Also check for any link to checkout page
+    const checkoutLinks = document.querySelectorAll('a[href*="checkout"]');
+    checkoutLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            checkAuthBeforeCheckout();
+        });
+    });
+});
+
+// Make the function globally available
+window.checkAuthBeforeCheckout = checkAuthBeforeCheckout;

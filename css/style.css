@@ -3334,3 +3334,390 @@ form p a {
         flex: 0 0 100%;
     }
 }
+
+
+         /* account-review */
+         
+/* Reviews Section Styles */
+.reviews-container {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.review-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+}
+
+.review-product-info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.review-product-info img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.review-product-info h4 {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.review-rating {
+    margin: 5px 0;
+}
+
+.review-rating .star-filled,
+.star-rating-write .star.active,
+.star-rating-edit .star.active {
+    color: #ffc107;
+}
+
+.review-rating .star-empty {
+    color: #ddd;
+}
+
+.review-date {
+    font-size: 12px;
+    color: #999;
+}
+
+.review-content h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.review-content p {
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.review-footer {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.helpful-count {
+    font-size: 13px;
+    color: #666;
+}
+
+.review-status {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+.review-status.approved {
+    background: #e8f5e9;
+    color: #4caf50;
+}
+
+.review-status.pending {
+    background: #fff3e0;
+    color: #ff9800;
+}
+
+.edit-review-btn, .delete-review-btn, .write-review-btn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.edit-review-btn {
+    background: #2196f3;
+    color: white;
+}
+
+.edit-review-btn:hover {
+    background: #0b7dda;
+}
+
+.delete-review-btn {
+    background: #f44336;
+    color: white;
+}
+
+.delete-review-btn:hover {
+    background: #da190b;
+}
+
+.write-review-btn {
+    background: #4caf50;
+    color: white;
+    margin-top: 10px;
+}
+
+.write-review-btn:hover {
+    background: #45a049;
+}
+
+/* Review Summary Stats */
+.review-summary {
+    display: flex;
+    gap: 40px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.avg-rating {
+    text-align: center;
+    min-width: 150px;
+}
+
+.avg-number {
+    font-size: 48px;
+    font-weight: bold;
+    color: #333;
+}
+
+.avg-rating .stars {
+    margin: 10px 0;
+}
+
+.total-reviews {
+    font-size: 14px;
+    color: #666;
+}
+
+.rating-breakdown {
+    flex: 1;
+    min-width: 200px;
+}
+
+.rating-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.star-label {
+    width: 40px;
+    font-size: 13px;
+}
+
+.bar-container {
+    flex: 1;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: #ffc107;
+    border-radius: 4px;
+}
+
+.bar-count {
+    width: 30px;
+    font-size: 13px;
+    color: #666;
+}
+
+/* Review Modal */
+.review-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.review-modal-content {
+    background: white;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 12px;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    font-size: 18px;
+}
+
+.close-modal-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px;
+    border-top: 1px solid #eee;
+}
+
+.star-rating-write, .star-rating-edit {
+    display: flex;
+    gap: 8px;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.star-rating-write .star, .star-rating-edit .star {
+    color: #ddd;
+    transition: color 0.2s;
+}
+
+.star-rating-write .star:hover,
+.star-rating-write .star.active,
+.star-rating-edit .star.active {
+    color: #ffc107;
+}
+
+.cancel-btn {
+    padding: 10px 20px;
+    background: #f5f5f5;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.submit-review-btn, .save-btn {
+    padding: 10px 20px;
+    background: #db4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.submit-review-btn:hover, .save-btn:hover {
+    background: #c93333;
+}
+
+.no-reviews {
+    text-align: center;
+    padding: 60px;
+    color: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .review-summary {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .review-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .review-product-info {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+
+/* Modal Styles */
+.customer-info-modal input,
+.customer-info-modal textarea {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.customer-info-modal input:focus,
+.customer-info-modal textarea:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+/* Payment Modal Styles */
+.payment-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.payment-modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    position: relative;
+}
+
+.close-modal {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.card-element {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+.payment-error {
+    color: red;
+    margin-top: 10px;
+    display: none;
+}
+
+#paypal-button-container,
+#google-pay-button {
+    margin: 20px 0;
+}

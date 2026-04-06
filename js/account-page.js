@@ -1,5 +1,3 @@
-
-
 // Account page initialization
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Account page loading...");
@@ -108,47 +106,48 @@ async function initAccountPage() {
         }
     }
     
-    function setupLogoutButton() {
-    const logoutBtn = document.getElementById('logout-btn');
-
-    if (!logoutBtn) return;
-
-    logoutBtn.addEventListener('click', () => {
-        try {
-            window.pb.authStore.clear();
-
-            if (window.authSystem) {
-                window.authSystem.currentUser = null;
-            }
-
-            alert('Logged out successfully');
-            window.location.href = "/user/signup.html";
-
-        } catch (err) {
-            console.error("Logout error:", err);
-        }
-    });
-}
     console.log("User logged in, loading account page...");
     await loadUserInfo();
     loadAccountSections();
     setupProfileForm();
     setupLogoutButton();
     setupActiveLinkHighlight();
-    showSectionFromHash();  
+    showSectionFromHash();
+    
+    // Load reviews from PocketBase
+    await loadUserReviews();
     
     // Show profile section by default
-    showProfileSection();
-                if (window.location.hash) {
-                showSectionFromHash();
-            } else {
-                showProfileSection();
-            }
-            function showSectionFromHash() {
-                const hash = window.location.hash.substring(1);
-                if (!hash) return;
+    if (window.location.hash) {
+        showSectionFromHash();
+    } else {
+        showProfileSection();
+    }
+}
 
-    hideAllSections(); // ✅ hide everything first
+function setupLogoutButton() {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (!logoutBtn) return;
+
+    logoutBtn.addEventListener('click', () => {
+        try {
+            window.pb.authStore.clear();
+            if (window.authSystem) {
+                window.authSystem.currentUser = null;
+            }
+            alert('Logged out successfully');
+            window.location.href = "/user/signup.html";
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+    });
+}
+
+function showSectionFromHash() {
+    const hash = window.location.hash.substring(1);
+    if (!hash) return;
+
+    hideAllSections();
 
     switch (hash) {
         case 'orders':
@@ -160,7 +159,7 @@ async function initAccountPage() {
             highlightSidebarLink('My Cancellations');
             break;
         case 'reviews':
-            showReviewsSection(); // create this if you have reviews
+            showReviewsSection();
             highlightSidebarLink('My Reviews');
             break;
         case 'profile':
@@ -188,7 +187,6 @@ function highlightSidebarLink(linkText) {
             l.classList.remove('active');
         }
     });
-}
 }
 
 // Setup active link highlighting
@@ -259,8 +257,15 @@ function loadAccountSections() {
         {
             title: "My Orders",
             links: [
+                { name: "My Orders", action: "showOrders" },
                 { name: "My Returns", action: "showReturns" },
                 { name: "My Cancellations", action: "showCancellations" }
+            ]
+        },
+        {
+            title: "My Reviews",
+            links: [
+                { name: "My Reviews", action: "showReviews" }
             ]
         },
         {
@@ -326,11 +331,17 @@ function handleSectionClick(action) {
         case 'showPayment':
             showPaymentSection();
             break;
+        case 'showOrders':
+            showOrdersSection('orders');
+            break;
         case 'showReturns':
             showOrdersSection('returns');
             break;
         case 'showCancellations':
             showOrdersSection('cancellations');
+            break;
+        case 'showReviews':
+            showReviewsSection();
             break;
     }
 }
@@ -363,28 +374,325 @@ function showPaymentSection() {
     let paymentSection = document.getElementById('payment-section');
     paymentSection.style.display = 'block';
 }
+
 function showReviewsSection() {
-    hideAllSections();
-    const reviewsSection = document.getElementById('reviews-section');
+    let reviewsSection = document.getElementById('reviews-section');
+    if (!reviewsSection) {
+        createReviewsSection();
+    }
+    reviewsSection = document.getElementById('reviews-section');
     if (reviewsSection) reviewsSection.style.display = 'block';
+    loadUserReviews();
 }
 
 function showOrdersSection(type) {
-    hideAllSections();
     let ordersSection = document.getElementById('orders-section');
-    ordersSection.style.display = 'block';
+    if (ordersSection) ordersSection.style.display = 'block';
     loadOrders(type);
 }
 
+// Create Reviews Section if it doesn't exist
+function createReviewsSection() {
+    const accountContent = document.querySelector('.account-content');
+    if (!accountContent) return;
+    
+    // Check if reviews section already exists
+    if (document.getElementById('reviews-section')) return;
+    
+    const reviewsSection = document.createElement('div');
+    reviewsSection.id = 'reviews-section';
+    reviewsSection.className = 'edit-profile';
+    reviewsSection.style.display = 'none';
+    reviewsSection.innerHTML = `
+        <h3>My Reviews & Ratings</h3>
+        <div id="reviews-list" class="reviews-container">
+            <div class="loading-reviews">Loading your reviews...</div>
+        </div>
+        <div class="review-stats" id="review-stats"></div>
+    `;
+    
+    accountContent.appendChild(reviewsSection);
+}
 
-// Load orders
+// ==================== POCKETBASE REVIEWS INTEGRATION ====================
+
+// Load user reviews from PocketBase
+async function loadUserReviews() {
+    const reviewsList = document.getElementById('reviews-list');
+    if (!reviewsList) return;
+    
+    const user = window.authSystem?.getUser();
+    if (!user) {
+        reviewsList.innerHTML = '<div class="no-reviews">Please login to view your reviews.</div>';
+        return;
+    }
+    
+    try {
+        // Fetch reviews from PocketBase
+        const reviews = await window.pb.collection("reviews").getFullList({
+            filter: `userId = "${user.id}"`,
+            sort: '-created',
+            $autoCancel: false
+        });
+        
+        if (reviews.length === 0) {
+            reviewsList.innerHTML = '<div class="no-reviews">You haven\'t written any reviews yet.</div>';
+            document.getElementById('review-stats').innerHTML = '';
+            return;
+        }
+        
+        // Calculate stats
+        const totalReviews = reviews.length;
+        const avgRating = reviews.reduce((sum, rev) => sum + rev.rating, 0) / totalReviews;
+        const ratingDistribution = {5:0, 4:0, 3:0, 2:0, 1:0};
+        reviews.forEach(rev => {
+            ratingDistribution[rev.rating]++;
+        });
+        
+        // Display stats
+        const statsContainer = document.getElementById('review-stats');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="review-summary">
+                    <div class="avg-rating">
+                        <span class="avg-number">${avgRating.toFixed(1)}</span>
+                        <div class="stars">${generateStars(Math.round(avgRating))}</div>
+                        <span class="total-reviews">${totalReviews} reviews</span>
+                    </div>
+                    <div class="rating-breakdown">
+                        ${[5,4,3,2,1].map(star => `
+                            <div class="rating-bar">
+                                <span class="star-label">${star} ★</span>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="width: ${(ratingDistribution[star] / totalReviews) * 100}%"></div>
+                                </div>
+                                <span class="bar-count">${ratingDistribution[star]}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Display reviews
+        reviewsList.innerHTML = reviews.map(review => `
+            <div class="review-card" data-review-id="${review.id}">
+                <div class="review-product-info">
+                    <img src="${review.productImage || '/images/placeholder.jpg'}" alt="${review.productName}" onerror="this.src='/images/placeholder.jpg'">
+                    <div>
+                        <h4>${escapeHtml(review.productName)}</h4>
+                        <div class="review-rating">${generateStars(review.rating)}</div>
+                        <span class="review-date">${new Date(review.date).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                <div class="review-content">
+                    <h4>${escapeHtml(review.title)}</h4>
+                    <p>${escapeHtml(review.comment)}</p>
+                    <div class="review-footer">
+                        <span class="helpful-count"><i class="fas fa-thumbs-up"></i> ${review.helpful || 0} found helpful</span>
+                        <span class="review-status ${review.status || 'pending'}">${review.status || 'pending'}</span>
+                        <button class="edit-review-btn" onclick="editReview('${review.id}')">Edit Review</button>
+                        <button class="delete-review-btn" onclick="deleteReview('${review.id}')">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error("Error loading reviews:", error);
+        reviewsList.innerHTML = '<div class="no-reviews">Error loading reviews. Please try again later.</div>';
+    }
+}
+
+// Add new review to PocketBase
+window.addReview = async function(productId, productName, productImage, rating, title, comment) {
+    const user = window.authSystem?.getUser();
+    if (!user) {
+        showNotification('Please login to submit a review', 'error');
+        return;
+    }
+    
+    try {
+        const review = await window.pb.collection("reviews").create({
+            userId: user.id,
+            productId: productId,
+            productName: productName,
+            productImage: productImage,
+            rating: rating,
+            title: title,
+            comment: comment,
+            date: new Date().toISOString(),
+            helpful: 0,
+            status: 'pending'
+        });
+        
+        console.log("Review saved to PocketBase:", review);
+        showNotification('Review submitted successfully! It will appear after approval.', 'success');
+        loadUserReviews(); // Reload reviews
+    } catch (error) {
+        console.error("Error saving review:", error);
+        showNotification('Error saving review: ' + (error.message || 'Unknown error'), 'error');
+    }
+};
+
+// Edit review in PocketBase
+window.editReview = async function(reviewId) {
+    try {
+        const review = await window.pb.collection("reviews").getOne(reviewId);
+        
+        // Create edit modal
+        const modal = document.createElement('div');
+        modal.className = 'review-modal';
+        modal.innerHTML = `
+            <div class="review-modal-content">
+                <div class="modal-header">
+                    <h3>Edit Your Review</h3>
+                    <button class="close-modal-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Rating</label>
+                        <div class="star-rating-edit" data-rating="${review.rating}">
+                            ${[1,2,3,4,5].map(star => `<span class="star" data-value="${star}">★</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="edit-review-title" value="${escapeHtml(review.title)}" placeholder="Review title">
+                    </div>
+                    <div class="form-group">
+                        <label>Review</label>
+                        <textarea id="edit-review-comment" rows="4" placeholder="Write your review...">${escapeHtml(review.comment)}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn">Cancel</button>
+                    <button class="save-btn">Save Changes</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Star rating functionality
+        const stars = modal.querySelectorAll('.star-rating-edit .star');
+        let selectedRating = review.rating;
+        
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                selectedRating = parseInt(star.dataset.value);
+                stars.forEach(s => {
+                    if (parseInt(s.dataset.value) <= selectedRating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+            // Set initial active stars
+            if (parseInt(star.dataset.value) <= review.rating) {
+                star.classList.add('active');
+            }
+        });
+        
+        modal.querySelector('.close-modal-btn').onclick = () => modal.remove();
+        modal.querySelector('.cancel-btn').onclick = () => modal.remove();
+        modal.querySelector('.save-btn').onclick = async () => {
+            const updatedTitle = modal.querySelector('#edit-review-title').value;
+            const updatedComment = modal.querySelector('#edit-review-comment').value;
+            
+            if (!updatedTitle || !updatedComment) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                await window.pb.collection("reviews").update(reviewId, {
+                    rating: selectedRating,
+                    title: updatedTitle,
+                    comment: updatedComment,
+                    date: new Date().toISOString()
+                });
+                
+                showNotification('Review updated successfully!', 'success');
+                loadUserReviews();
+                modal.remove();
+            } catch (error) {
+                console.error("Error updating review:", error);
+                showNotification('Error updating review', 'error');
+            }
+        };
+    } catch (error) {
+        console.error("Error loading review for edit:", error);
+        showNotification('Error loading review', 'error');
+    }
+};
+
+// Delete review from PocketBase
+window.deleteReview = async function(reviewId) {
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) return;
+    
+    try {
+        await window.pb.collection("reviews").delete(reviewId);
+        showNotification('Review deleted successfully!', 'success');
+        loadUserReviews();
+    } catch (error) {
+        console.error("Error deleting review:", error);
+        showNotification('Error deleting review', 'error');
+    }
+};
+
+// Generate stars HTML
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+            stars += '<i class="fas fa-star star-filled"></i>';
+        } else {
+            stars += '<i class="far fa-star star-empty"></i>';
+        }
+    }
+    return stars;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Show notification
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#4CAF50' : '#f44336'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Load orders (mock data - replace with actual API call)
 function loadOrders(type) {
     const ordersList = document.getElementById('orders-list');
     if (!ordersList) return;
     
     const orders = [
-        { id: 'ORD-001', date: '2024-01-15', total: 299.99, status: 'Delivered', type: 'order' },
-        { id: 'ORD-002', date: '2024-02-20', total: 159.99, status: 'Processing', type: 'order' },
+        { id: 'ORD-001', date: '2024-01-15', total: 299.99, status: 'Delivered', type: 'order', productId: '1', productName: 'iPhone 14 Pro Max', productImage: '/images/slider-pic1.jpg' },
+        { id: 'ORD-002', date: '2024-02-20', total: 159.99, status: 'Processing', type: 'order', productId: '2', productName: 'Samsung Galaxy S23 Ultra', productImage: '/images/slider-pic2.webp' },
         { id: 'RET-001', date: '2024-03-01', total: 89.99, status: 'Refunded', type: 'return' },
         { id: 'CAN-001', date: '2024-02-10', total: 49.99, status: 'Cancelled', type: 'cancellation' }
     ];
@@ -406,9 +714,89 @@ function loadOrders(type) {
             <p>Date: ${order.date}</p>
             <p>Total: $${order.total}</p>
             <p>Status: <span style="color: ${order.status === 'Delivered' ? '#4CAF50' : '#ff9800'}">${order.status}</span></p>
+            ${order.type === 'order' ? `<button class="write-review-btn" onclick="openWriteReview('${order.id}')">Write a Review</button>` : ''}
         </div>
     `).join('');
 }
+
+// Function to open write review modal for a product
+window.openWriteReview = function(orderId) {
+    // Find the product from order (mock data - replace with actual order data)
+    const orderProducts = {
+        'ORD-001': { id: '1', name: 'iPhone 14 Pro Max', image: '/images/slider-pic1.jpg' },
+        'ORD-002': { id: '2', name: 'Samsung Galaxy S23 Ultra', image: '/images/slider-pic2.webp' }
+    };
+    
+    const product = orderProducts[orderId];
+    if (!product) return;
+    
+    const modal = document.createElement('div');
+    modal.className = 'review-modal';
+    modal.innerHTML = `
+        <div class="review-modal-content">
+            <div class="modal-header">
+                <h3>Write a Review for ${product.name}</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Your Rating</label>
+                    <div class="star-rating-write">
+                        ${[1,2,3,4,5].map(star => `<span class="star" data-value="${star}">★</span>`).join('')}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Review Title</label>
+                    <input type="text" id="review-title" placeholder="Summarize your experience">
+                </div>
+                <div class="form-group">
+                    <label>Your Review</label>
+                    <textarea id="review-comment" rows="4" placeholder="Share details about your experience with the product"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">Cancel</button>
+                <button class="submit-review-btn">Submit Review</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    let selectedRating = 0;
+    const stars = modal.querySelectorAll('.star-rating-write .star');
+    
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            selectedRating = parseInt(star.dataset.value);
+            stars.forEach(s => {
+                if (parseInt(s.dataset.value) <= selectedRating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        });
+    });
+    
+    modal.querySelector('.close-modal-btn').onclick = () => modal.remove();
+    modal.querySelector('.cancel-btn').onclick = () => modal.remove();
+    modal.querySelector('.submit-review-btn').onclick = () => {
+        const title = modal.querySelector('#review-title').value;
+        const comment = modal.querySelector('#review-comment').value;
+        
+        if (selectedRating === 0) {
+            alert('Please select a rating');
+            return;
+        }
+        if (!title || !comment) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        addReview(product.id, product.name, product.image, selectedRating, title, comment);
+        modal.remove();
+    };
+};
 
 // Setup profile form
 function setupProfileForm() {
@@ -441,12 +829,12 @@ async function saveProfile() {
         address: address
     };
 
-    // ✅ Only update email if changed
+    // Only update email if changed
     if (email && email !== currentUser.email) {
         updateData.email = email;
     }
 
-    // ✅ Proper password update
+    // Proper password update
     if (newPassword || confirmPassword) {
         if (!currentPassword) {
             alert('Enter current password');
@@ -471,21 +859,18 @@ async function saveProfile() {
     console.log("Sending updateData:", updateData);
 
     try {
-            const updatedUser = await window.pb
+        const updatedUser = await window.pb
             .collection("exclusive_users_collection")
             .update(currentUser.id, updateData, {
                 $autoCancel: false
             });
 
         window.authSystem.currentUser = updatedUser;
-
         alert('Profile updated successfully!');
         await loadUserInfo();
 
     } catch (error) {
         console.error("Update error FULL:", error);
-
-        // 🔥 SHOW REAL ERROR
         alert(error?.data?.message || error.message);
     }
 }

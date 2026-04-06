@@ -1,4 +1,5 @@
-// checkout.js
+// checkout.js - Only handles UI rendering and triggers payment
+
 window.addEventListener("DOMContentLoaded", () => {
 
     const checkoutContainer = document.querySelector(".check-out-prev");
@@ -7,45 +8,42 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // Get cart from localStorage
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
+    console.log('🛒 Cart loaded:', cart.length, 'items');
 
     // Payment method logos
     const paymentLogos = {
-        visa: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png",
-        mastercard: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/2560px-Mastercard-logo.svg.png",
-        paypal: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/PayPal.svg/2560px-PayPal.svg.png",
-        applepay: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/2560px-Apple_Pay_logo.svg.png",
-        googlepay: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Google_Pay_Logo.svg/2560px-Google_Pay_Logo.svg.png",
-        bank_transfer: "/images/bank-transfer.png" // You can add your own bank icon
+        visa: "/images/payments/Visa_Inc._logo_(2021–present).svg.png",
+        mastercard: "/images/payments/master.png",
+        paypal: "/images/payments/paypalpng.png",
+        applepay: "/images/payments/apple.png",
+        googlepay: "/images/payments/google.png",
+        bank_transfer: "/images/bank-transfer.png"
     };
 
-    // Helper function to format item details (color, size)
+    // Helper function to format item details
     function getItemDetails(item) {
         const details = [];
         
-        // Add color if exists and not empty
         if (item.color && item.color !== 'null' && item.color !== 'undefined' && item.color.trim() !== '') {
             details.push(`${item.color}`);
         }
         
-        // Add size if exists and not empty
         if (item.size && item.size !== 'null' && item.size !== 'undefined' && item.size.trim() !== '') {
             details.push(`${item.size}`);
         }
         
-        // Format the details string
         if (details.length === 0) return '';
         if (details.length === 1) return `(${details[0]})`;
         return `(${details.join(', ')})`;
     }
 
-    // Function to render checkout
+    // Render checkout page
     function renderCheckout() {
         if (cart.length === 0) {
             checkoutContainer.innerHTML = `<p>Your cart is empty</p>`;
             return;
         }
 
-        // Build product HTML with scrollable container
         const productHTML = `
             <div class="cart-products-scroll">
                 ${cart.map(item => {
@@ -69,12 +67,10 @@ window.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
 
-        // Calculate totals
         const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
         const shipping = 0;
         const total = subtotal + shipping;
 
-        // Full HTML with separate sections and payment logos
         checkoutContainer.innerHTML = `
             ${productHTML}
             
@@ -155,8 +151,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 </div>
                 
                 <div class="coupon-section" id="coup-container">
-                    <input type="text" placeholder="Coupon Code">
-                    <button class="colored-btn">Apply Coupon</button>
+                    <input type="text" id="coupon-code" placeholder="Coupon Code">
+                    <button class="colored-btn" id="apply-coupon-btn">Apply Coupon</button>
                 </div>
                 
                 <button class="colored-btn" id="place-order-btn">Place Order</button>
@@ -165,39 +161,104 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     renderCheckout();
-    
-    // Add event listener for place order
-    document.addEventListener('click', (e) => {
-        if (e.target.id === 'place-order-btn') {
-            const selectedPayment = document.querySelector('input[name="payment-meth"]:checked');
-            if (!selectedPayment) {
-                alert('Please select a payment method');
+});
+
+// Handle place order button click
+document.addEventListener('click', async (e) => {
+    if (e.target.id === 'place-order-btn') {
+        console.log('🔴 Place order button clicked!');
+        
+        // Get fresh cart data
+        const cart = JSON.parse(localStorage.getItem("cart")) || [];
+        
+        if (cart.length === 0) {
+            alert('Your cart is empty!');
+            return;
+        }
+        
+        const selectedPayment = document.querySelector('input[name="payment-meth"]:checked');
+        console.log('Selected payment method:', selectedPayment?.value);
+        
+        if (!selectedPayment) {
+            alert('Please select a payment method');
+            return;
+        }
+        
+        // Check if payment processor is available
+        if (!window.paymentProcessor) {
+            console.error('❌ Payment processor not found! Waiting...');
+            alert('Payment system is loading. Please wait a moment and try again.');
+            return;
+        }
+        
+        // Show loading state
+        const placeOrderBtn = e.target;
+        const originalText = placeOrderBtn.textContent;
+        placeOrderBtn.textContent = 'Processing...';
+        placeOrderBtn.disabled = true;
+        
+        try {
+            const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            
+            // Collect customer info
+            const customerInfo = await window.paymentProcessor.collectCustomerInfo();
+            
+            if (!customerInfo) {
+                placeOrderBtn.textContent = originalText;
+                placeOrderBtn.disabled = false;
                 return;
             }
             
-            // Get payment method display name
-            const paymentNames = {
-                visa: 'Visa Card',
-                mastercard: 'Mastercard',
-                paypal: 'PayPal',
-                applepay: 'Apple Pay',
-                googlepay: 'Google Pay',
-                bank: 'Bank Transfer',
-                cash: 'Cash on Delivery'
+            // Prepare order data
+            const orderData = {
+                userId: null,
+                items: cart.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.qty,
+                    color: item.color || null,
+                    size: item.size || null,
+                    img: item.img
+                })),
+                total: total,
+                paymentMethod: selectedPayment.value === 'cash' ? 'cash_on_delivery' : 
+                              selectedPayment.value === 'bank' ? 'bank_transfer' : 
+                              selectedPayment.value,
+                customerInfo: {
+                    name: customerInfo.name,
+                    email: customerInfo.email,
+                    phone: customerInfo.phone,
+                    address: customerInfo.address
+                }
             };
             
-            // Get order summary
-            const orderSummary = cart.map(item => {
-                const details = [];
-                if (item.color) details.push(`Color: ${item.color}`);
-                if (item.size) details.push(`Size: ${item.size}`);
-                const detailsText = details.length ? ` (${details.join(', ')})` : '';
-                return `${item.name}${detailsText} x${item.qty}`;
-            }).join('\n');
+            console.log('Processing order:', orderData);
             
-            const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            // Process payment
+            const result = await window.paymentProcessor.processPayment(orderData, selectedPayment.value);
             
-            alert(`Order placed with ${paymentNames[selectedPayment.value]}\n\nItems:\n${orderSummary}\n\nTotal: $${total.toFixed(2)}`);
+            if (result.success) {
+                localStorage.removeItem('cart');
+                
+                if (selectedPayment.value === 'cash') {
+                    alert(`✅ Order Placed Successfully!\n\n📦 Order ID: ${result.orderId}\n💰 Amount: ₦${total.toFixed(2)}\n📊 Status: Pending\n\nWe will contact you at ${customerInfo.phone}`);
+                    window.location.href = `/order-tracking.html?orderId=${result.orderId}`;
+                } else if (selectedPayment.value === 'bank') {
+                    alert(`📋 Order Saved!\n\nOrder ID: ${result.orderId}\n\nPlease transfer ₦${result.bankDetails.amount} to:\nBank: ${result.bankDetails.bankName}\nAccount: ${result.bankDetails.accountNumber}\nReference: ${result.bankDetails.reference}`);
+                    window.location.href = `/order-tracking.html?orderId=${result.orderId}`;
+                }
+            } else {
+                alert(`❌ Failed: ${result.error}`);
+                placeOrderBtn.textContent = originalText;
+                placeOrderBtn.disabled = false;
+            }
+            
+        } catch (error) {
+            console.error('Order error:', error);
+            alert(`Error: ${error.message}`);
+            placeOrderBtn.textContent = originalText;
+            placeOrderBtn.disabled = false;
         }
-    });
+    }
 });

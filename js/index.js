@@ -326,12 +326,12 @@ async function loadCategoryLinks() {
             { display: "Woman's Fashion", filter: "Fashion", hasIcon: true },
             { display: "Men's Fashion", filter: "Fashion", hasIcon: true },
             { display: "Electronics", filter: "Electronics", hasIcon: false },
-            { display: "Home & Lifestyle", filter: "Home & Lifestyle", hasIcon: false },
+            { display: "Home & Lifestyle", filter: "Home&Lifestyle", hasIcon: false },
             { display: "Medicine", filter: "Medicine", hasIcon: false },
-            { display: "Sports & Outdoor", filter: "Sports & Outdoor", hasIcon: false },
-            { display: "Baby's & Toys", filter: "Baby's & Toys", hasIcon: false },
-            { display: "Groceries & Pets", filter: "Groceries & Pets", hasIcon: false },
-            { display: "Health & Beauty", filter: "Health & Beauty", hasIcon: false }
+            { display: "Sports & Outdoor", filter: "Sports&Outdoors", hasIcon: false },
+            { display: "Baby's & Toys", filter: "Baby's&Toys", hasIcon: false },
+            { display: "Groceries & Pets", filter: "Groceries&Pets", hasIcon: false },
+            { display: "Health & Beauty", filter: "Health&Beauty", hasIcon: false }
         ];
         
         const container = document.querySelector(".exclusive-text ul");
@@ -363,12 +363,12 @@ function loadStaticCategoryLinks() {
         { display: "Woman's Fashion", filter: "Fashion", hasIcon: true },
         { display: "Men's Fashion", filter: "Fashion", hasIcon: true },
         { display: "Electronics", filter: "Electronics", hasIcon: false },
-        { display: "Home & Lifestyle", filter: "Home & Lifestyle", hasIcon: false },
+        { display: "Home & Lifestyle", filter: "Home&Lifestyle", hasIcon: false },
         { display: "Medicine", filter: "Medicine", hasIcon: false },
-        { display: "Sports & Outdoor", filter: "Sports & Outdoor", hasIcon: false },
-        { display: "Baby's & Toys", filter: "Baby's & Toys", hasIcon: false },
-        { display: "Groceries & Pets", filter: "Groceries & Pets", hasIcon: false },
-        { display: "Health & Beauty", filter: "Health & Beauty", hasIcon: false }
+        { display: "Sports & Outdoor", filter: "Sports&Outdoors", hasIcon: false },
+        { display: "Baby's & Toys", filter: "Baby's&Toys", hasIcon: false },
+        { display: "Groceries & Pets", filter: "Groceries&Pets", hasIcon: false },
+        { display: "Health & Beauty", filter: "Health&Beauty", hasIcon: false }
     ];
     
     const container = document.querySelector(".exclusive-text ul");
