@@ -48,29 +48,29 @@
                     <div class="info-flex">
                         <div class="str-flex">
                             <label for="firstName">First Name</label>
-                            <input type="text" id="firstName" placeholder="First Name" required>
+                            <input type="text" id="firstName" placeholder="First Name" autocomplete="given-name" required>
                         </div>
                         <div class="str-flex">
                             <label for="lastName">Last Name</label>
-                            <input type="text" id="lastName" placeholder="Last Name" required>
+                            <input type="text" id="lastName" placeholder="Last Name" autocomplete="family-name" required>
                         </div>
                     </div>
                     <div class="info-flex">
                         <div class="str-flex">
                             <label for="email">Email</label>
-                            <input type="email" id="email" placeholder="Email" required>
+                            <input type="email" id="email" placeholder="Email" autocomplete="email" required>
                         </div>
                         <div class="str-flex">
                             <label for="address">Address</label>
-                            <input type="text" id="address" placeholder="Address" required>
+                            <input type="text" id="address" placeholder="Address" autocomplete="street-address" required>
                         </div>
                     </div>
 
                     <div class="password-section">
                         <label>Password Changes</label>
-                        <input type="password" id="currentPassword" placeholder="Current Password">
-                        <input type="password" id="newPassword" placeholder="New Password">
-                        <input type="password" id="confirmPassword" placeholder="Confirm New Password">
+                        <input type="password" id="currentPassword" placeholder="Current Password" autocomplete="current-password">
+                        <input type="password" id="newPassword" placeholder="New Password" autocomplete="new-password">
+                        <input type="password" id="confirmPassword" placeholder="Confirm New Password" autocomplete="confirm-password">
                     </div>
 
                     <div class="info-processing">
@@ -86,22 +86,22 @@
                 <div class="address-form">
                     <div class="info-flex">
                         <div class="str-flex">
-                            <input type="text" id="street-address" placeholder="Street Address">
+                            <input type="text" id="street-address" placeholder="Street Address" autocomplete="street-address">
                         </div>
                         <div class="str-flex">
-                            <input type="text" id="city" placeholder="City">
+                            <input type="text" id="city" placeholder="City" autocomplete="address-level2">
                         </div>
                     </div>
                     <div class="info-flex">
                         <div class="str-flex">
-                            <input type="text" id="state" placeholder="State">
+                            <input type="text" id="state" placeholder="State" autocomplete="address-level1">
                         </div>
                         <div class="str-flex">
-                            <input type="text" id="zip-code" placeholder="Zip Code">
+                            <input type="text" id="zip-code" placeholder="Zip Code" autocomplete="postal-code">
                         </div>
                     </div>
                     <div class="str-flex">
-                        <input type="text" id="country" placeholder="Country">
+                        <input type="text" id="country" placeholder="Country" autocomplete="country-name">
                     </div>
                     <div class="info-processing">
                         <button class="colored-btn" onclick="saveAddress()">Save Address</button>
@@ -115,18 +115,18 @@
                 <div class="payment-form">
                     <div class="info-flex">
                         <div class="str-flex">
-                            <input type="text" id="card-number" placeholder="Card Number">
+                            <input type="text" id="card-number" placeholder="Card Number" autocomplete="cc-number">
                         </div>
                         <div class="str-flex">
-                            <input type="text" id="card-name" placeholder="Card Holder Name">
+                            <input type="text" id="card-name" placeholder="Card Holder Name" autocomplete="cc-name">
                         </div>
                     </div>
                     <div class="info-flex">
                         <div class="str-flex">
-                            <input type="text" id="expiry-date" placeholder="Expiry Date (MM/YY)">
+                            <input type="text" id="expiry-date" placeholder="Expiry Date (MM/YY)" autocomplete="cc-expiration">
                         </div>
                         <div class="str-flex">
-                            <input type="text" id="cvv" placeholder="CVV">
+                            <input type="text" id="cvv" placeholder="CVV" autocomplete="cc-csc">
                         </div>
                     </div>
                     <div class="info-processing">

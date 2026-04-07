@@ -77,22 +77,21 @@ function setupSidebarToggle() {
 }
 
 async function initAccountPage() {
-    console.log("Initializing account page...");
     
     await new Promise(resolve => setTimeout(resolve, 200));
     
     const isLoggedIn = window.authSystem?.isLoggedIn();
-    console.log("Is logged in check:", isLoggedIn);
+     
     
     if (!isLoggedIn) {
         if (window.pb && window.pb.authStore && window.pb.authStore.isValid) {
-            console.log("PocketBase auth is valid, forcing user load...");
+             
             const userId = window.pb.authStore.model?.id;
             if (userId) {
                 try {
                     const userRecord = await window.pb.collection("exclusive_users_collection").getOne(userId);
                     window.authSystem.currentUser = userRecord;
-                    console.log("User loaded manually:", userRecord);
+                    
                 } catch (err) {
                     console.error("Failed to load user:", err);
                 }
@@ -212,7 +211,7 @@ function setupActiveLinkHighlight() {
 // Load user info from PocketBase
 async function loadUserInfo() {
     const user = window.authSystem?.getUser();
-    console.log("Loading user info:", user);
+    
     
     if (user) {
         const displayName = user.name || user.email || 'User';
@@ -1048,7 +1047,7 @@ window.openWriteReview = function(orderId) {
                 </div>
                 <div class="form-group">
                     <label>Review Title</label>
-                    <input type="text" id="review-title" placeholder="Summarize your experience">
+                    <input type="text" id="review-title" placeholder="Summarize your experience" autocomplete="experience">
                 </div>
                 <div class="form-group">
                     <label>Your Review</label>

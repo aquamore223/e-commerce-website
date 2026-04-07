@@ -125,7 +125,7 @@ class AuthSystem {
                             $autoCancel: false
                         });
 
-                    console.log("👤 Auth loaded:", this.currentUser?.email);
+                    
                 }
             } else {
                 this.currentUser = null;
