@@ -9,7 +9,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!productPB) return console.error("Product not found!");
 
     const product = formatPBProduct(productPB);
-    console.log("Product loaded:", product);
+     
 
     // ---------------- BREADCRUMB ----------------
     const breadcrumb = document.getElementById("disp-hd");
