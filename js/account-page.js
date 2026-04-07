@@ -686,38 +686,339 @@ function showNotification(message, type) {
 }
 
 // Load orders (mock data - replace with actual API call)
-function loadOrders(type) {
+// account-page.js - Now using external CSS
+
+// Function to load orders
+async function loadOrders(type = 'normal') {
     const ordersList = document.getElementById('orders-list');
     if (!ordersList) return;
+
+    // Show loading state
+    ordersList.innerHTML = `
+        <div class="orders-loading">
+            <div class="spinner"></div>
+            <p>Loading your orders...</p>
+        </div>
+    `;
+
+    // Get user from localStorage
+    let userId = null;
+    let user = null;
     
-    const orders = [
-        { id: 'ORD-001', date: '2024-01-15', total: 299.99, status: 'Delivered', type: 'order', productId: '1', productName: 'iPhone 14 Pro Max', productImage: '/images/slider-pic1.jpg' },
-        { id: 'ORD-002', date: '2024-02-20', total: 159.99, status: 'Processing', type: 'order', productId: '2', productName: 'Samsung Galaxy S23 Ultra', productImage: '/images/slider-pic2.webp' },
-        { id: 'RET-001', date: '2024-03-01', total: 89.99, status: 'Refunded', type: 'return' },
-        { id: 'CAN-001', date: '2024-02-10', total: 49.99, status: 'Cancelled', type: 'cancellation' }
-    ];
-    
-    const filteredOrders = orders.filter(order => {
-        if (type === 'returns') return order.type === 'return';
-        if (type === 'cancellations') return order.type === 'cancellation';
-        return order.type === 'order';
-    });
-    
-    if (filteredOrders.length === 0) {
-        ordersList.innerHTML = '<p>No orders found.</p>';
-        return;
+    try {
+        const authData = localStorage.getItem('pocketbase_auth');
+        if (authData) {
+            const auth = JSON.parse(authData);
+            userId = auth.record?.id;
+            user = auth.record;
+            console.log('User ID:', userId);
+        }
+    } catch (e) {
+        console.error('Error parsing auth:', e);
     }
     
-    ordersList.innerHTML = filteredOrders.map(order => `
-        <div class="order-item">
-            <p><strong>Order #${order.id}</strong></p>
-            <p>Date: ${order.date}</p>
-            <p>Total: $${order.total}</p>
-            <p>Status: <span style="color: ${order.status === 'Delivered' ? '#4CAF50' : '#ff9800'}">${order.status}</span></p>
-            ${order.type === 'order' ? `<button class="write-review-btn" onclick="openWriteReview('${order.id}')">Write a Review</button>` : ''}
-        </div>
-    `).join('');
+    if (!userId) {
+        ordersList.innerHTML = `
+            <div class="empty-orders">
+                <div class="empty-orders-icon">🔒</div>
+                <h3>Please Login</h3>
+                <p>You need to be logged in to view your orders.</p>
+                <a href="/login.html" class="shop-now-link">Login Now</a>
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        // Make sure pb is initialized
+        if (!window.pb) {
+            window.pb = new PocketBase('https://itrain.services.hodessy.com');
+        }
+        
+        // Fetch orders for this user
+        const orders = await window.pb.collection("orders").getFullList({
+            filter: `userId = "${userId}"`,
+            sort: '-created',
+            $autoCancel: false
+        });
+        
+        console.log("Orders fetched:", orders.length);
+        
+        if (orders.length === 0) {
+            ordersList.innerHTML = `
+                <div class="empty-orders">
+                    <div class="empty-orders-icon">📦</div>
+                    <h3>No Orders Yet</h3>
+                    <p>You haven't placed any orders yet.</p>
+                    <a href="/shop.html" class="shop-now-link">Start Shopping</a>
+                </div>
+            `;
+            return;
+        }
+
+        // Filter by type
+        const filteredOrders = orders.filter(order => {
+            if (type === 'cancellations') return order.orderStatus === 'cancelled';
+            if (type === 'returns') return order.orderStatus === 'returned';
+            return order.orderStatus !== 'cancelled' && order.orderStatus !== 'returned';
+        });
+
+        if (filteredOrders.length === 0) {
+            ordersList.innerHTML = `
+                <div class="empty-orders">
+                    <div class="empty-orders-icon">📭</div>
+                    <h3>No ${type} Orders</h3>
+                    <p>You don't have any ${type} orders.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Render orders
+        ordersList.innerHTML = filteredOrders.map(order => {
+            // Parse items
+            let items = order.items;
+            if (typeof items === 'string') {
+                try {
+                    items = JSON.parse(items);
+                } catch (e) {
+                    items = [];
+                }
+            }
+            
+            return `
+                <div class="order-item" data-order-id="${order.id}">
+                    <div class="order-header">
+                        <div class="order-header-item">
+                            <span class="order-header-label">Order ID</span>
+                            <span class="order-header-value order-id">#${order.id.slice(-8).toUpperCase()}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Order Date</span>
+                            <span class="order-header-value">${new Date(order.created).toLocaleDateString()}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Payment Method</span>
+                            <span class="order-header-value">${order.paymentMethod?.replace('_', ' ').toUpperCase() || 'N/A'}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Payment Status</span>
+                            <span class="payment-badge payment-${order.paymentStatus}">${order.paymentStatus?.toUpperCase() || 'PENDING'}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Order Status</span>
+                            <span class="status-badge status-${order.orderStatus}">${order.orderStatus?.toUpperCase() || 'PENDING'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="order-products">
+                        <div class="order-products-title">Products (${items.length})</div>
+                        ${items.slice(0, 3).map(item => `
+                            <div class="order-product">
+                                <img src="${item.img || '/images/placeholder.jpg'}" alt="${item.name}" class="order-product-img" onerror="this.src='/images/placeholder.jpg'">
+                                <div class="order-product-info">
+                                    <div class="order-product-name">${item.name}</div>
+                                    <div class="order-product-details">
+                                        <span>Qty: ${item.quantity || item.qty}</span>
+                                        ${item.color ? `<span>Color: ${item.color}</span>` : ''}
+                                        ${item.size ? `<span>Size: ${item.size}</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="order-product-price">
+                                    ${window.formatPrice ? window.formatPrice(item.price * (item.quantity || item.qty)) : `₦${(item.price * (item.quantity || item.qty)).toFixed(2)}`}
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${items.length > 3 ? `
+                            <div class="order-product" style="justify-content: center; color: #666;">
+                                + ${items.length - 3} more items
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="order-footer">
+                        <div class="order-total">
+                            <span class="order-total-label">Total Amount:</span>
+                            ${window.formatPrice ? window.formatPrice(order.total) : `₦${parseFloat(order.total).toFixed(2)}`}
+                        </div>
+                        <div class="order-actions">
+                            <button onclick="viewOrderDetails('${order.id}')" class="btn-view-details">View Details</button>
+                            ${order.orderStatus === 'pending' ? `<button onclick="cancelOrder('${order.id}')" class="btn-cancel-order">Cancel Order</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("Error loading orders:", error);
+        ordersList.innerHTML = `
+            <div class="empty-orders">
+                <div class="empty-orders-icon">⚠️</div>
+                <h3>Error Loading Orders</h3>
+                <p>${error.message}</p>
+                <button onclick="location.reload()" class="shop-now-link">Try Again</button>
+            </div>
+        `;
+    }
 }
+
+// View order details
+window.viewOrderDetails = async function(orderId) {
+    try {
+        if (!window.pb) {
+            window.pb = new PocketBase('https://itrain.services.hodessy.com');
+        }
+        
+        const order = await window.pb.collection('orders').getOne(orderId, {
+            $autoCancel: false
+        });
+        
+        showOrderDetailsModal(order);
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        alert('Error loading order details');
+    }
+};
+
+// Show order details modal
+function showOrderDetailsModal(order) {
+    let items = order.items;
+    if (typeof items === 'string') {
+        try {
+            items = JSON.parse(items);
+        } catch (e) {
+            items = [];
+        }
+    }
+    
+    const modalHtml = `
+        <div class="order-modal" id="order-modal">
+            <div class="order-modal-content">
+                <div class="order-modal-header">
+                    <h2>Order #${order.id.slice(-8).toUpperCase()}</h2>
+                    <button class="order-modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="order-modal-body">
+                    <div class="order-section">
+                        <h3>Order Information</h3>
+                        <div class="order-info-grid">
+                            <div class="order-info-item">
+                                <span class="order-info-label">Order Date</span>
+                                <span class="order-info-value">${new Date(order.created).toLocaleString()}</span>
+                            </div>
+                            <div class="order-info-item">
+                                <span class="order-info-label">Payment Method</span>
+                                <span class="order-info-value">${order.paymentMethod?.replace('_', ' ').toUpperCase()}</span>
+                            </div>
+                            <div class="order-info-item">
+                                <span class="order-info-label">Payment Status</span>
+                                <span class="payment-badge payment-${order.paymentStatus}">${order.paymentStatus?.toUpperCase()}</span>
+                            </div>
+                            <div class="order-info-item">
+                                <span class="order-info-label">Order Status</span>
+                                <span class="status-badge status-${order.orderStatus}">${order.orderStatus?.toUpperCase()}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-section">
+                        <h3>Delivery Information</h3>
+                        <div class="order-info-grid">
+                            <div class="order-info-item">
+                                <span class="order-info-label">Full Name</span>
+                                <span class="order-info-value">${order.customerName || 'N/A'}</span>
+                            </div>
+                            <div class="order-info-item">
+                                <span class="order-info-label">Email</span>
+                                <span class="order-info-value">${order.email || 'N/A'}</span>
+                            </div>
+                            <div class="order-info-item">
+                                <span class="order-info-label">Phone</span>
+                                <span class="order-info-value">${order.phone || 'N/A'}</span>
+                            </div>
+                            <div class="order-info-item">
+                                <span class="order-info-label">Address</span>
+                                <span class="order-info-value">${order.address || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-section">
+                        <h3>Items (${items.length})</h3>
+                        <ul class="modal-items-list">
+                            ${items.map(item => `
+                                <li class="modal-item">
+                                    <img src="${item.img || '/images/placeholder.jpg'}" class="modal-item-img" onerror="this.src='/images/placeholder.jpg'">
+                                    <div class="modal-item-details">
+                                        <div class="modal-item-name">${item.name}</div>
+                                        <div class="modal-item-meta">
+                                            Quantity: ${item.quantity || item.qty}
+                                            ${item.color ? ` | Color: ${item.color}` : ''}
+                                            ${item.size ? ` | Size: ${item.size}` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="modal-item-price">
+                                        ${window.formatPrice ? window.formatPrice(item.price * (item.quantity || item.qty)) : `₦${(item.price * (item.quantity || item.qty)).toFixed(2)}`}
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="order-section">
+                        <div class="order-total" style="text-align: right; font-size: 20px;">
+                            Total: ${window.formatPrice ? window.formatPrice(order.total) : `₦${parseFloat(order.total).toFixed(2)}`}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('order-modal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('order-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'order-modal') {
+            closeModal();
+        }
+    });
+}
+
+// Close modal
+window.closeModal = function() {
+    const modal = document.getElementById('order-modal');
+    if (modal) modal.remove();
+};
+
+// Cancel order
+window.cancelOrder = async function(orderId) {
+    if (confirm('Are you sure you want to cancel this order?')) {
+        try {
+            if (!window.pb) {
+                window.pb = new PocketBase('https://itrain.services.hodessy.com');
+            }
+            
+            await window.pb.collection('orders').update(orderId, {
+                orderStatus: 'cancelled'
+            });
+            alert('Order cancelled successfully');
+            loadOrders('normal');
+        } catch (error) {
+            console.error('Error cancelling order:', error);
+            alert('Error cancelling order');
+        }
+    }
+};
+
+// Initialize account page
+document.addEventListener('DOMContentLoaded', () => {
+    // Load orders when page loads
+    loadOrders('normal');
+});
 
 // Function to open write review modal for a product
 window.openWriteReview = function(orderId) {
@@ -900,3 +1201,506 @@ window.savePayment = function() {
     localStorage.setItem('userPayment', JSON.stringify(payment));
     alert('Payment method saved successfully!');
 };
+
+// account-page.js - Complete pagination for all sections
+
+// Pagination state for different sections
+const paginationState = {
+    orders: { currentPage: 1, itemsPerPage: 2, totalPages: 0, totalItems: 0, cache: [] },
+    cancellations: { currentPage: 1, itemsPerPage: 2, totalPages: 0, totalItems: 0, cache: [] },
+    returns: { currentPage: 1, itemsPerPage: 2, totalPages: 0, totalItems: 0, cache: [] },
+    reviews: { currentPage: 1, itemsPerPage: 2, totalPages: 0, totalItems: 0, cache: [] }
+};
+
+let currentActiveSection = 'orders';
+
+// ==================== ORDERS SECTION WITH PAGINATION ====================
+
+async function loadOrders(type = 'normal', page = 1) {
+    const ordersList = document.getElementById('orders-list');
+    if (!ordersList) return;
+
+    // Determine which state to use
+    let stateKey = 'orders';
+    let filterType = 'normal';
+    
+    if (type === 'cancellations') {
+        stateKey = 'cancellations';
+        filterType = 'cancelled';
+    } else if (type === 'returns') {
+        stateKey = 'returns';
+        filterType = 'returned';
+    }
+    
+    const state = paginationState[stateKey];
+    state.currentPage = page;
+    currentActiveSection = stateKey;
+
+    // Show loading state
+    ordersList.innerHTML = `
+        <div class="orders-loading">
+            <div class="spinner"></div>
+            <p>Loading your orders...</p>
+        </div>
+    `;
+
+    // Get user from localStorage
+    let userId = null;
+    
+    try {
+        const authData = localStorage.getItem('pocketbase_auth');
+        if (authData) {
+            const auth = JSON.parse(authData);
+            userId = auth.record?.id;
+        }
+    } catch (e) {
+        console.error('Error parsing auth:', e);
+    }
+    
+    if (!userId) {
+        ordersList.innerHTML = `
+            <div class="empty-orders">
+                <div class="empty-orders-icon">🔒</div>
+                <h3>Please Login</h3>
+                <p>You need to be logged in to view your orders.</p>
+                <a href="/login.html" class="shop-now-link">Login Now</a>
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        if (!window.pb) {
+            window.pb = new PocketBase('https://itrain.services.hodessy.com');
+        }
+        
+        // Fetch orders if cache is empty
+        if (state.cache.length === 0) {
+            const orders = await window.pb.collection("orders").getFullList({
+                filter: `userId = "${userId}"`,
+                sort: '-created',
+                $autoCancel: false
+            });
+            state.cache = orders;
+        }
+        
+        // Filter by type
+        let filteredOrders = state.cache;
+        if (filterType === 'cancelled') {
+            filteredOrders = state.cache.filter(order => order.orderStatus === 'cancelled');
+        } else if (filterType === 'returned') {
+            filteredOrders = state.cache.filter(order => order.orderStatus === 'returned');
+        } else {
+            filteredOrders = state.cache.filter(order => order.orderStatus !== 'cancelled' && order.orderStatus !== 'returned');
+        }
+        
+        state.totalItems = filteredOrders.length;
+        state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
+        
+        if (state.totalItems === 0) {
+            let emptyMessage = '';
+            if (filterType === 'cancelled') emptyMessage = 'No cancelled orders found.';
+            else if (filterType === 'returned') emptyMessage = 'No returned orders found.';
+            else emptyMessage = 'No orders found.';
+            
+            ordersList.innerHTML = `
+                <div class="empty-orders">
+                    <div class="empty-orders-icon">📭</div>
+                    <h3>${emptyMessage}</h3>
+                    <a href="/shop.html" class="shop-now-link">Start Shopping</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // Paginate
+        const startIndex = (page - 1) * state.itemsPerPage;
+        const endIndex = startIndex + state.itemsPerPage;
+        const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+        
+        // Render orders with pagination info
+        const ordersInfo = `
+            <div class="orders-info">
+                <span class="orders-count">
+                    Showing <strong>${startIndex + 1}-${Math.min(endIndex, state.totalItems)}</strong> 
+                    of <strong>${state.totalItems}</strong> orders
+                </span>
+                <span class="orders-per-page">
+                    Show: 
+                    <select onchange="changeOrdersPerPage('${stateKey}', this.value)" class="per-page-select">
+                        <option value="2" ${state.itemsPerPage === 2 ? 'selected' : ''}>2</option>
+                        <option value="5" ${state.itemsPerPage === 5? 'selected' : ''}>5</option>
+                        <option value="10" ${state.itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                        <option value="20" ${state.itemsPerPage === 20 ? 'selected' : ''}>20</option>
+                    </select>
+                </span>
+            </div>
+        `;
+        
+        ordersList.innerHTML = ordersInfo + paginatedOrders.map(order => {
+            let items = order.items;
+            if (typeof items === 'string') {
+                try { items = JSON.parse(items); } catch(e) { items = []; }
+            }
+            
+            return `
+                <div class="order-item" data-order-id="${order.id}">
+                    <div class="order-header">
+                        <div class="order-header-item">
+                            <span class="order-header-label">Order ID</span>
+                            <span class="order-header-value order-id">#${order.id.slice(-8).toUpperCase()}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Order Date</span>
+                            <span class="order-header-value">${new Date(order.created).toLocaleDateString()}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Payment Method</span>
+                            <span class="order-header-value">${order.paymentMethod?.replace('_', ' ').toUpperCase() || 'N/A'}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Payment Status</span>
+                            <span class="payment-badge payment-${order.paymentStatus}">${order.paymentStatus?.toUpperCase() || 'PENDING'}</span>
+                        </div>
+                        <div class="order-header-item">
+                            <span class="order-header-label">Order Status</span>
+                            <span class="status-badge status-${order.orderStatus}">${order.orderStatus?.toUpperCase() || 'PENDING'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="order-products">
+                        <div class="order-products-title">Products (${items.length})</div>
+                        ${items.slice(0, 3).map(item => `
+                            <div class="order-product">
+                                <img src="${item.img || '/images/placeholder.jpg'}" class="order-product-img" onerror="this.src='/images/placeholder.jpg'">
+                                <div class="order-product-info">
+                                    <div class="order-product-name">${escapeHtml(item.name)}</div>
+                                    <div class="order-product-details">
+                                        <span>Qty: ${item.quantity || item.qty}</span>
+                                        ${item.color ? `<span>Color: ${item.color}</span>` : ''}
+                                        ${item.size ? `<span>Size: ${item.size}</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="order-product-price">
+                                    ${window.formatPrice ? window.formatPrice(item.price * (item.quantity || item.qty)) : `₦${(item.price * (item.quantity || item.qty)).toFixed(2)}`}
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${items.length > 3 ? `<div class="order-product" style="justify-content: center; color: #666;">+ ${items.length - 3} more items</div>` : ''}
+                    </div>
+                    
+                    <div class="order-footer">
+                        <div class="order-total">
+                            <span class="order-total-label">Total Amount:</span>
+                            ${window.formatPrice ? window.formatPrice(order.total) : `₦${parseFloat(order.total).toFixed(2)}`}
+                        </div>
+                        <div class="order-actions">
+                            <button onclick="viewOrderDetails('${order.id}')" class="btn-view-details">View Details</button>
+                            ${order.orderStatus === 'pending' ? `<button onclick="cancelOrder('${order.id}')" class="btn-cancel-order">Cancel Order</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Render pagination
+        renderOrdersPagination(stateKey, state.totalPages, state.currentPage);
+        
+    } catch (error) {
+        console.error("Error loading orders:", error);
+        ordersList.innerHTML = `<div class="empty-orders"><div class="empty-orders-icon">⚠️</div><h3>Error Loading Orders</h3><p>${error.message}</p><button onclick="location.reload()" class="shop-now-link">Try Again</button></div>`;
+    }
+}
+
+// Render pagination for orders
+function renderOrdersPagination(section, totalPages, currentPage) {
+    const paginationContainer = document.getElementById('orders-pagination');
+    if (!paginationContainer) return;
+    
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+    
+    let paginationHtml = `<div class="pagination-wrapper"><button class="pagination-btn" onclick="changeOrdersPage('${section}', ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i> Previous</button><div class="pagination-numbers">`;
+    
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `<button class="page-number ${i === currentPage ? 'active' : ''}" onclick="changeOrdersPage('${section}', ${i})">${i}</button>`;
+        }
+    } else {
+        paginationHtml += `<button class="page-number ${1 === currentPage ? 'active' : ''}" onclick="changeOrdersPage('${section}', 1)">1</button>`;
+        if (currentPage > 3) paginationHtml += `<span class="pagination-ellipsis">...</span>`;
+        let startPage = Math.max(2, currentPage - 1);
+        let endPage = Math.min(totalPages - 1, currentPage + 1);
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `<button class="page-number ${i === currentPage ? 'active' : ''}" onclick="changeOrdersPage('${section}', ${i})">${i}</button>`;
+        }
+        if (currentPage < totalPages - 2) paginationHtml += `<span class="pagination-ellipsis">...</span>`;
+        paginationHtml += `<button class="page-number ${totalPages === currentPage ? 'active' : ''}" onclick="changeOrdersPage('${section}', ${totalPages})">${totalPages}</button>`;
+    }
+    
+    paginationHtml += `</div><button class="pagination-btn" onclick="changeOrdersPage('${section}', ${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next <i class="fas fa-chevron-right"></i></button></div>`;
+    paginationContainer.innerHTML = paginationHtml;
+}
+
+// Change orders page
+window.changeOrdersPage = function(section, page) {
+    const state = paginationState[section];
+    if (page < 1 || page > state.totalPages) return;
+    state.currentPage = page;
+    
+    if (section === 'cancellations') loadOrders('cancellations', page);
+    else if (section === 'returns') loadOrders('returns', page);
+    else loadOrders('normal', page);
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// Change items per page
+window.changeOrdersPerPage = function(section, value) {
+    const state = paginationState[section];
+    state.itemsPerPage = parseInt(value);
+    state.currentPage = 1;
+    
+    if (section === 'cancellations') loadOrders('cancellations', 1);
+    else if (section === 'returns') loadOrders('returns', 1);
+    else loadOrders('normal', 1);
+};
+
+// ==================== REVIEWS SECTION WITH PAGINATION ====================
+
+async function loadUserReviews(page = 1) {
+    const reviewsList = document.getElementById('reviews-list');
+    if (!reviewsList) return;
+    
+    const state = paginationState.reviews;
+    state.currentPage = page;
+    
+    reviewsList.innerHTML = `<div class="orders-loading"><div class="spinner"></div><p>Loading your reviews...</p></div>`;
+    
+    const user = window.authSystem?.getUser();
+    if (!user) {
+        reviewsList.innerHTML = '<div class="empty-orders"><div class="empty-orders-icon">🔒</div><h3>Please Login</h3><p>Login to view your reviews.</p></div>';
+        return;
+    }
+    
+    try {
+        if (state.cache.length === 0) {
+            const reviews = await window.pb.collection("reviews").getFullList({
+                filter: `userId = "${user.id}"`,
+                sort: '-created',
+                $autoCancel: false
+            });
+            state.cache = reviews;
+        }
+        
+        state.totalItems = state.cache.length;
+        state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
+        
+        if (state.totalItems === 0) {
+            reviewsList.innerHTML = '<div class="empty-orders"><div class="empty-orders-icon">📝</div><h3>No Reviews Yet</h3><p>You haven\'t written any reviews yet.</p></div>';
+            document.getElementById('review-stats').innerHTML = '';
+            return;
+        }
+        
+        // Calculate stats
+        const avgRating = state.cache.reduce((sum, rev) => sum + rev.rating, 0) / state.totalItems;
+        const ratingDistribution = {5:0, 4:0, 3:0, 2:0, 1:0};
+        state.cache.forEach(rev => { ratingDistribution[rev.rating]++; });
+        
+        // Display stats
+        const statsContainer = document.getElementById('review-stats');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="review-summary">
+                    <div class="avg-rating">
+                        <span class="avg-number">${avgRating.toFixed(1)}</span>
+                        <div class="stars">${generateStars(Math.round(avgRating))}</div>
+                        <span class="total-reviews">${state.totalItems} reviews</span>
+                    </div>
+                    <div class="rating-breakdown">
+                        ${[5,4,3,2,1].map(star => `
+                            <div class="rating-bar">
+                                <span class="star-label">${star} ★</span>
+                                <div class="bar-container"><div class="bar-fill" style="width: ${(ratingDistribution[star] / state.totalItems) * 100}%"></div></div>
+                                <span class="bar-count">${ratingDistribution[star]}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Paginate
+        const startIndex = (page - 1) * state.itemsPerPage;
+        const endIndex = startIndex + state.itemsPerPage;
+        const paginatedReviews = state.cache.slice(startIndex, endIndex);
+        
+        const reviewsInfo = `
+            <div class="orders-info">
+                <span class="orders-count">Showing <strong>${startIndex + 1}-${Math.min(endIndex, state.totalItems)}</strong> of <strong>${state.totalItems}</strong> reviews</span>
+                <span class="orders-per-page">
+                    Show: 
+                    <select onchange="changeReviewsPerPage(this.value)" class="per-page-select">
+                        <option value="5" ${state.itemsPerPage === 5 ? 'selected' : ''}>5</option>
+                        <option value="10" ${state.itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                        <option value="20" ${state.itemsPerPage === 20 ? 'selected' : ''}>20</option>
+                    </select>
+                </span>
+            </div>
+        `;
+        
+        reviewsList.innerHTML = reviewsInfo + paginatedReviews.map(review => `
+            <div class="review-card" data-review-id="${review.id}">
+                <div class="review-product-info">
+                    <img src="${review.productImage || '/images/placeholder.jpg'}" onerror="this.src='/images/placeholder.jpg'">
+                    <div>
+                        <h4>${escapeHtml(review.productName)}</h4>
+                        <div class="review-rating">${generateStars(review.rating)}</div>
+                        <span class="review-date">${new Date(review.created || review.date).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                <div class="review-content">
+                    <h4>${escapeHtml(review.title)}</h4>
+                    <p>${escapeHtml(review.comment)}</p>
+                    <div class="review-footer">
+                        <span class="helpful-count"><i class="fas fa-thumbs-up"></i> ${review.helpful || 0} found helpful</span>
+                        <span class="review-status ${review.status || 'pending'}">${review.status || 'pending'}</span>
+                        <button class="edit-review-btn" onclick="editReview('${review.id}')">Edit Review</button>
+                        <button class="delete-review-btn" onclick="deleteReview('${review.id}')">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        renderReviewsPagination();
+        
+    } catch (error) {
+        console.error("Error loading reviews:", error);
+        reviewsList.innerHTML = '<div class="empty-orders"><div class="empty-orders-icon">⚠️</div><h3>Error Loading Reviews</h3></div>';
+    }
+}
+
+// Render reviews pagination
+function renderReviewsPagination() {
+    const paginationContainer = document.getElementById('reviews-pagination');
+    if (!paginationContainer) return;
+    
+    const state = paginationState.reviews;
+    if (state.totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+    
+    let paginationHtml = `<div class="pagination-wrapper"><button class="pagination-btn" onclick="changeReviewsPage(${state.currentPage - 1})" ${state.currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i> Previous</button><div class="pagination-numbers">`;
+    
+    for (let i = 1; i <= state.totalPages; i++) {
+        if (i === 1 || i === state.totalPages || (i >= state.currentPage - 2 && i <= state.currentPage + 2)) {
+            paginationHtml += `<button class="page-number ${i === state.currentPage ? 'active' : ''}" onclick="changeReviewsPage(${i})">${i}</button>`;
+        } else if (i === state.currentPage - 3 || i === state.currentPage + 3) {
+            paginationHtml += `<span class="pagination-ellipsis">...</span>`;
+        }
+    }
+    
+    paginationHtml += `</div><button class="pagination-btn" onclick="changeReviewsPage(${state.currentPage + 1})" ${state.currentPage === state.totalPages ? 'disabled' : ''}>Next <i class="fas fa-chevron-right"></i></button></div>`;
+    paginationContainer.innerHTML = paginationHtml;
+}
+
+// Change reviews page
+window.changeReviewsPage = function(page) {
+    if (page < 1 || page > paginationState.reviews.totalPages) return;
+    loadUserReviews(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// Change reviews per page
+window.changeReviewsPerPage = function(value) {
+    paginationState.reviews.itemsPerPage = parseInt(value);
+    paginationState.reviews.currentPage = 1;
+    loadUserReviews(1);
+};
+
+// ==================== HELPER FUNCTIONS ====================
+
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        stars += i <= rating ? '<i class="fas fa-star star-filled"></i>' : '<i class="far fa-star star-empty"></i>';
+    }
+    return stars;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ==================== UPDATE SECTION HANDLERS ====================
+
+// Update the showOrdersSection function
+function showOrdersSection(type) {
+    let ordersSection = document.getElementById('orders-section');
+    if (ordersSection) ordersSection.style.display = 'block';
+    
+    // Clear cache when switching sections
+    if (type === 'cancellations') {
+        paginationState.cancellations.cache = [];
+        loadOrders('cancellations', 1);
+    } else if (type === 'returns') {
+        paginationState.returns.cache = [];
+        loadOrders('returns', 1);
+    } else {
+        paginationState.orders.cache = [];
+        loadOrders('normal', 1);
+    }
+}
+
+// Update showReviewsSection function
+function showReviewsSection() {
+    let reviewsSection = document.getElementById('reviews-section');
+    if (!reviewsSection) createReviewsSection();
+    reviewsSection = document.getElementById('reviews-section');
+    if (reviewsSection) reviewsSection.style.display = 'block';
+    
+    // Clear cache and reload
+    paginationState.reviews.cache = [];
+    loadUserReviews(1);
+}
+
+// Create reviews section with pagination container
+function createReviewsSection() {
+    const accountContent = document.querySelector('.account-content');
+    if (!accountContent || document.getElementById('reviews-section')) return;
+    
+    const reviewsSection = document.createElement('div');
+    reviewsSection.id = 'reviews-section';
+    reviewsSection.className = 'edit-profile';
+    reviewsSection.style.display = 'none';
+    reviewsSection.innerHTML = `
+        <h3>My Reviews & Ratings</h3>
+        <div id="reviews-list" class="reviews-container">
+            <div class="loading-reviews">Loading your reviews...</div>
+        </div>
+        <div id="review-stats" class="review-stats"></div>
+        <div id="reviews-pagination" class="reviews-pagination"></div>
+    `;
+    accountContent.appendChild(reviewsSection);
+}
+
+// Add pagination container to orders section in HTML
+function addOrdersPaginationContainer() {
+    const ordersSection = document.getElementById('orders-section');
+    if (ordersSection && !document.getElementById('orders-pagination')) {
+        const paginationDiv = document.createElement('div');
+        paginationDiv.id = 'orders-pagination';
+        ordersSection.appendChild(paginationDiv);
+    }
+}
+
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        addOrdersPaginationContainer();
+    }, 500);
+});

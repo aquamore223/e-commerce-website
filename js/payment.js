@@ -55,60 +55,70 @@ class PaymentProcessor {
     }
 
     // Save order to PocketBase
-    async saveOrderToDatabase(orderData) {
-        console.log('🔵 saveOrderToDatabase called with:', orderData);
-        
-        if (!this.pb) {
-            console.error('❌ PocketBase not available');
-            return this.saveOrderLocally(orderData);
-        }
-
-        try {
-            console.log('📝 Preparing order record...');
-            
-            const orderRecord = {
-                userId: orderData.userId || null,
-                items: orderData.items,
-                total: orderData.total,
-                paymentMethod: orderData.paymentMethod,
-                paymentStatus: 'pending',
-                orderStatus: 'pending',
-                email: orderData.customerInfo.email,
-                address: orderData.customerInfo.address,
-                phone: orderData.customerInfo.phone,
-                customerName: orderData.customerInfo.name
-            };
-            
-            console.log('📤 Sending to PocketBase:', orderRecord);
-            
-            const result = await this.pb.collection('orders').create(orderRecord);
-            console.log('✅ Order saved to database! Response:', result);
-            
-            return {
-                success: true,
-                orderId: result.id,
-                isLocal: false,
-                orderData: result
-            };
-        } catch (error) {
-            console.error('❌ Database save error:', error);
-            console.error('Error details:', {
-                message: error.message,
-                status: error.status,
-                data: error.data
-            });
-            
-            if (error.status === 400) {
-                alert(`Database Error: ${error.message}\n\nCheck that all fields match your PocketBase collection schema.`);
-            } else if (error.status === 403) {
-                alert('Permission denied. Please set API rules for orders collection in PocketBase admin.');
-            } else if (error.status === 404) {
-                alert('Orders collection not found. Please create "orders" collection in PocketBase admin.');
-            }
-            
-            return this.saveOrderLocally(orderData);
-        }
+  async saveOrderToDatabase(orderData) {
+    console.log('🔵 saveOrderToDatabase called');
+    
+    if (!this.pb) {
+        console.error('❌ PocketBase not available');
+        return this.saveOrderLocally(orderData);
     }
+
+    try {
+        // Get userId from multiple sources
+        let userId = null;
+        
+        // Source 1: pb.authStore
+        if (this.pb.authStore && this.pb.authStore.isValid) {
+            userId = this.pb.authStore.model?.id;
+            console.log('UserId from pb.authStore:', userId);
+        }
+        
+        // Source 2: localStorage
+        if (!userId) {
+            const authData = localStorage.getItem('pocketbase_auth');
+            if (authData) {
+                try {
+                    const auth = JSON.parse(authData);
+                    userId = auth.model?.id;
+                    console.log('UserId from localStorage:', userId);
+                } catch (e) {}
+            }
+        }
+        
+        // Source 3: window.authSystem
+        if (!userId && window.authSystem?.getUser()) {
+            userId = window.authSystem.getUser().id;
+            console.log('UserId from authSystem:', userId);
+        }
+        
+        console.log('Final userId to save:', userId);
+        
+        const orderRecord = {
+            userId: userId,  // This must match the field name in PocketBase
+            customerName: orderData.customerInfo.name,
+            email: orderData.customerInfo.email,
+            phone: orderData.customerInfo.phone,
+            address: orderData.customerInfo.address,
+            items: orderData.items,
+            total: orderData.total,
+            paymentMethod: orderData.paymentMethod,
+            paymentStatus: 'pending',
+            orderStatus: 'pending'
+        };
+        
+        const result = await this.pb.collection('orders').create(orderRecord);
+        console.log('✅ Order saved with userId:', result.userId);
+        
+        return {
+            success: true,
+            orderId: result.id,
+            orderData: result
+        };
+    } catch (error) {
+        console.error('❌ Database save error:', error);
+        return this.saveOrderLocally(orderData);
+    }
+}
 
     // Fallback: Save order locally
     saveOrderLocally(orderData) {
