@@ -773,7 +773,7 @@ async function loadOrders(type = 'normal') {
             return;
         }
 
-        // Render orders
+        // Render orders with tracking button
         ordersList.innerHTML = filteredOrders.map(order => {
             // Parse items
             let items = order.items;
@@ -784,6 +784,9 @@ async function loadOrders(type = 'normal') {
                     items = [];
                 }
             }
+            
+            // Check if order is not delivered (can be tracked)
+            const canTrack = order.orderStatus !== 'delivered' && order.orderStatus !== 'cancelled';
             
             return `
                 <div class="order-item" data-order-id="${order.id}">
@@ -816,7 +819,7 @@ async function loadOrders(type = 'normal') {
                             <div class="order-product">
                                 <img src="${item.img || '/images/placeholder.jpg'}" alt="${item.name}" class="order-product-img" onerror="this.src='/images/placeholder.jpg'">
                                 <div class="order-product-info">
-                                    <div class="order-product-name">${item.name}</div>
+                                    <div class="order-product-name">${escapeHtml(item.name)}</div>
                                     <div class="order-product-details">
                                         <span>Qty: ${item.quantity || item.qty}</span>
                                         ${item.color ? `<span>Color: ${item.color}</span>` : ''}
@@ -842,6 +845,11 @@ async function loadOrders(type = 'normal') {
                         </div>
                         <div class="order-actions">
                             <button onclick="viewOrderDetails('${order.id}')" class="btn-view-details">View Details</button>
+                            ${canTrack ? `
+                                <button onclick="trackOrder('${order.id}')" class="btn-track-order">
+                                    <i class="fas fa-truck"></i> Track Order
+                                </button>
+                            ` : ''}
                             ${order.orderStatus === 'pending' ? `<button onclick="cancelOrder('${order.id}')" class="btn-cancel-order">Cancel Order</button>` : ''}
                         </div>
                     </div>
@@ -861,6 +869,7 @@ async function loadOrders(type = 'normal') {
         `;
     }
 }
+
 
 // View order details
 window.viewOrderDetails = async function(orderId) {
@@ -1317,7 +1326,7 @@ async function loadOrders(type = 'normal', page = 1) {
         const endIndex = startIndex + state.itemsPerPage;
         const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
         
-        // Render orders with pagination info
+        // Render orders with pagination info and tracking button
         const ordersInfo = `
             <div class="orders-info">
                 <span class="orders-count">
@@ -1341,6 +1350,9 @@ async function loadOrders(type = 'normal', page = 1) {
             if (typeof items === 'string') {
                 try { items = JSON.parse(items); } catch(e) { items = []; }
             }
+            
+            // Check if order can be tracked (not delivered and not cancelled)
+            const canTrack = order.orderStatus !== 'delivered' && order.orderStatus !== 'cancelled';
             
             return `
                 <div class="order-item" data-order-id="${order.id}">
@@ -1395,6 +1407,11 @@ async function loadOrders(type = 'normal', page = 1) {
                         </div>
                         <div class="order-actions">
                             <button onclick="viewOrderDetails('${order.id}')" class="btn-view-details">View Details</button>
+                            ${canTrack ? `
+                                <button onclick="trackOrder('${order.id}')" class="btn-track-order">
+                                    <i class="fas fa-truck"></i> Track Order
+                                </button>
+                            ` : ''}
                             ${order.orderStatus === 'pending' ? `<button onclick="cancelOrder('${order.id}')" class="btn-cancel-order">Cancel Order</button>` : ''}
                         </div>
                     </div>
@@ -1694,6 +1711,14 @@ function addOrdersPaginationContainer() {
         const paginationDiv = document.createElement('div');
         paginationDiv.id = 'orders-pagination';
         ordersSection.appendChild(paginationDiv);
+    }
+}
+
+
+// Track order function - redirect to tracking page
+function trackOrder(orderId) {
+    if (orderId) {
+        window.location.href = `/order&payment/order-tracking.html?orderId=${orderId}`;
     }
 }
 
