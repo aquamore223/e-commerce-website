@@ -122,7 +122,7 @@ class HomeProductsLoader {
   }
 
   /* ---------------- FLASH SALES ---------------- */
-  loadFlashSales() {
+  async loadFlashSales() {
     const container = document.querySelector(".first-product-scroll .scroller");
     if (!container) return;
     
@@ -134,12 +134,12 @@ class HomeProductsLoader {
       return;
     }
     
-    container.innerHTML = flashProducts.map(p => this.productCard(p)).join("");
+    const productCards = await Promise.all(flashProducts.map(p => this.productCard(p)));
+    container.innerHTML = productCards.join("");
     this.renderIcons();
   }
-
   /* ---------------- BEST SELLING ---------------- */
-  loadBestSelling() {
+  async loadBestSelling() {
     let container = document.querySelector(".best-product-scroll .scroller");
     
     if (!container) {
@@ -159,12 +159,13 @@ class HomeProductsLoader {
       return;
     }
     
-    container.innerHTML = bestProducts.map(p => this.productCard(p)).join("");
+    const productCards = await Promise.all(bestProducts.map(p => this.productCard(p)));
+    container.innerHTML = productCards.join("");
     this.renderIcons();
   }
 
-  /* ---------------- OUR PRODUCTS ---------------- */
-  loadOurProducts() {
+    /* ---------------- OUR PRODUCTS ---------------- */
+  async loadOurProducts() {
     const containers = document.querySelectorAll(".our-products .scroller");
     
     if (containers.length < 2) {
@@ -174,8 +175,11 @@ class HomeProductsLoader {
     
     const all = this.products;
     
-    containers[0].innerHTML = all.slice(0, 6).map(p => this.productCard(p)).join("");
-    containers[1].innerHTML = all.slice(6, 12).map(p => this.productCard(p)).join("");
+    const firstSixCards = await Promise.all(all.slice(0, 6).map(p => this.productCard(p)));
+    const nextSixCards = await Promise.all(all.slice(6, 12).map(p => this.productCard(p)));
+    
+    containers[0].innerHTML = firstSixCards.join("");
+    containers[1].innerHTML = nextSixCards.join("");
     
     this.renderIcons();
   }
@@ -431,51 +435,71 @@ class HomeProductsLoader {
   }
 
   /* ---------------- PRODUCT CARD ---------------- */
-  productCard(product) {
-    const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";
-    const tag = this.getTag(product);
+async productCard(product) {
+  // Fetch real reviews count from reviews collection
+  let reviewCount = 0;
+  let avgRating = product.rating || 4;
+  
+  try {
+    const reviews = await window.pb.collection("reviews").getFullList({
+      filter: `productId = "${product.id}" && status = "approved"`,
+      $autoCancel: false
+    });
     
-    const isWishlisted = window.wishlistSystem ? 
-      window.wishlistSystem.isWishlisted(product.id) : false;
-    
-    const isViewed = window.viewedSystem ? 
-      window.viewedSystem.isViewed(product.id) : false;
-
-    return `
-      <div class="scroll" data-product-id="${product.id}">
-        <div class="scroll-img-section">
-          <a href="product-details.html?id=${product.id}">
-            <img src="${product.img}" alt="${product.name}" onerror="this.src='/images/placeholder.jpg'">
-          </a>
-          ${tag ? `<span class="scroll-tag ${product.flashSale ? 'flash-tag' : 'best-tag'}">${tag}</span>` : ""}
-          <div class="scroll-icon">
-            <span class="heart-icon" data-id="${product.id}">
-              <i data-lucide="heart" class="${isWishlisted ? 'filled' : ''}"></i>
-            </span>
-            <span class="eye-icon" data-id="${product.id}">
-              <i data-lucide="eye" class="${isViewed ? 'viewed' : ''}"></i>
-            </span>
-          </div>
-          <button class="add-to-cart-btn" data-id="${product.id}">
-            Add To Cart
-          </button>
-        </div>
-        <a href="product-details.html?id=${product.id}">
-          <div class="scroll-text">
-            <h5>${product.name}</h5>
-            <p class="price">
-              ${formatPrice(product.price)}
-              ${oldPrice ? `<span>${oldPrice}</span>` : ''}
-            </p>
-            <div class="rating">
-              ${this.stars(product.rating)}
-              <span>(${product.reviews})</span>
-            </div>
-          </div>
-        </a>
-      </div>
-    `;
+    reviewCount = reviews.length;
+    if (reviewCount > 0) {
+      avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+    }
+  } catch (error) {
+    // Fallback to product's existing reviews field
+    reviewCount = product.reviews || 0;
+    avgRating = product.rating || 4;
   }
+  
+  const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";
+  const tag = this.getTag(product);
+  
+  const isWishlisted = window.wishlistSystem ? 
+    window.wishlistSystem.isWishlisted(product.id) : false;
+  
+  const isViewed = window.viewedSystem ? 
+    window.viewedSystem.isViewed(product.id) : false;
+
+  return `
+    <div class="scroll" data-product-id="${product.id}">
+      <div class="scroll-img-section">
+        <a href="product-details.html?id=${product.id}">
+          <img src="${product.img}" alt="${product.name}" onerror="this.src='/images/placeholder.jpg'">
+        </a>
+        ${tag ? `<span class="scroll-tag ${product.flashSale ? 'flash-tag' : 'best-tag'}">${tag}</span>` : ""}
+        <div class="scroll-icon">
+          <span class="heart-icon" data-id="${product.id}">
+            <i data-lucide="heart" class="${isWishlisted ? 'filled' : ''}"></i>
+          </span>
+          <span class="eye-icon" data-id="${product.id}">
+            <i data-lucide="eye" class="${isViewed ? 'viewed' : ''}"></i>
+          </span>
+        </div>
+        <button class="add-to-cart-btn" data-id="${product.id}">
+          Add To Cart
+        </button>
+      </div>
+      <a href="product-details.html?id=${product.id}">
+        <div class="scroll-text">
+          <h5>${product.name}</h5>
+          <p class="price">
+            ${formatPrice(product.price)}
+            ${oldPrice ? `<span>${oldPrice}</span>` : ''}
+          </p>
+          <div class="rating">
+            ${this.stars(avgRating)}
+            <span>(${reviewCount})</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  `;
+}
 
   /* ---------------- STAR RATING ---------------- */
   stars(rating) {

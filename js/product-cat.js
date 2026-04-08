@@ -50,10 +50,11 @@ async function loadCategoryProducts() {
             $autoCancel: false
         });
 
-        // Format and filter products - case insensitive
-        allFilteredProducts = result
-            .map(p => formatPBProduct(p))
-            .filter(p => p.category?.toLowerCase() === category.toLowerCase());
+        // Format products first
+        const formattedProducts = result.map(p => formatPBProduct(p));
+        
+        // Filter by category
+        allFilteredProducts = formattedProducts.filter(p => p.category?.toLowerCase() === category.toLowerCase());
 
         if (allFilteredProducts.length === 0) {
             container.innerHTML = `<p>No products found in "${category}" category</p>`;
@@ -62,6 +63,9 @@ async function loadCategoryProducts() {
             return;
         }
 
+        // Load real review data for all products
+        await loadReviewDataForProducts(allFilteredProducts);
+        
         renderProductsPage();
         setupPagination();
 
@@ -71,6 +75,50 @@ async function loadCategoryProducts() {
     } catch (err) {
         console.error(err);
         container.innerHTML = "<p>Error loading products</p>";
+    }
+}
+
+/* ---------------- LOAD REAL REVIEW DATA FOR PRODUCTS ---------------- */
+async function loadReviewDataForProducts(products) {
+    try {
+        // Fetch all approved reviews
+        const allReviews = await window.pb.collection("reviews").getFullList({
+            filter: 'status = "approved"',
+            $autoCancel: false
+        });
+        
+        // Group reviews by productId
+        const reviewsByProduct = {};
+        allReviews.forEach(review => {
+            if (!reviewsByProduct[review.productId]) {
+                reviewsByProduct[review.productId] = [];
+            }
+            reviewsByProduct[review.productId].push(review);
+        });
+        
+        // Add review data to each product
+        products.forEach(product => {
+            const productReviews = reviewsByProduct[product.id] || [];
+            const reviewCount = productReviews.length;
+            
+            if (reviewCount > 0) {
+                const avgRating = productReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+                product.realRating = avgRating;
+                product.realReviewCount = reviewCount;
+            } else {
+                // Fallback to product's existing data
+                product.realRating = product.rating || 4;
+                product.realReviewCount = product.reviews || 0;
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error loading reviews:", error);
+        // Fallback to product's existing data
+        products.forEach(product => {
+            product.realRating = product.rating || 4;
+            product.realReviewCount = product.reviews || 0;
+        });
     }
 }
 
@@ -284,7 +332,9 @@ function formatPBProduct(p) {
     rating: p.rating || 4,
     reviews: p.reviews || 0,
     flashSale: p.flashSale === true || p.flashSale === "true",
-    bestSelling: p.bestSelling === true || p.bestSelling === "true"
+    bestSelling: p.bestSelling === true || p.bestSelling === "true",
+    realRating: null, // Will be populated later
+    realReviewCount: null // Will be populated later
   };
 }
 
@@ -297,6 +347,10 @@ function getTag(product) {
 function productCard(product) {
   const oldPrice = product.oldPrice ? formatPrice(product.oldPrice) : "";
   const tag = getTag(product);
+  
+  // Use real review data if available, otherwise fallback to product data
+  const displayRating = product.realRating !== null ? product.realRating : product.rating;
+  const displayReviewCount = product.realReviewCount !== null ? product.realReviewCount : product.reviews;
   
   // Check states at render time
   const isWishlisted = window.wishlistSystem?.isWishlisted(product.id) || false;
@@ -329,8 +383,8 @@ function productCard(product) {
           ${oldPrice ? `<span>${oldPrice}</span>` : ''}
         </p>
         <div class="rating">
-          ${stars(product.rating)}
-          <span>(${product.reviews || 0})</span>
+          ${stars(displayRating)}
+          <span>(${displayReviewCount})</span>
         </div>
       </div>
     </a>
@@ -341,7 +395,7 @@ function productCard(product) {
 /* ---------------- STAR RATING ---------------- */
 function stars(rating = 0) {
   let starHTML = "";
-  const starRating = rating || 4;
+  const starRating = Math.round(rating || 4);
 
   for (let i = 1; i <= 5; i++) {
     if (i <= starRating) {
@@ -351,6 +405,15 @@ function stars(rating = 0) {
     }
   }
   return starHTML;
+}
+
+/* ---------------- FORMAT PRICE ---------------- */
+function formatPrice(price) {
+  if (typeof price === "string") {
+    price = parseFloat(price.replace(/[^0-9.-]/g, ""));
+  }
+  if (isNaN(price)) price = 0;
+  return `$${price.toFixed(2)}`;
 }
 
 /* ---------------- APPLY ICON STATES ---------------- */
@@ -387,9 +450,6 @@ function applyIconStates() {
     }
   });
 }
-
-// REMOVE THE DUPLICATE CLICK HANDLER - Let cart.js handle all clicks
-// The cart.js global click handler will handle heart clicks
 
 // Export for debugging
 window.productCategory = {

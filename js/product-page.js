@@ -78,24 +78,48 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------- RATINGS ----------------
-    const ratingContainer = document.querySelector(".prod-det-text .rating");
+     const ratingContainer = document.querySelector(".prod-det-text .rating");
     if (ratingContainer) {
+      // Fetch real reviews from the reviews collection
+      let realReviewCount = 0;
+      let realAvgRating = 4;
+      
+      try {
+        const productReviews = await window.pb.collection("reviews").getFullList({
+          filter: `productId = "${product.id}" && status = "approved"`,
+          $autoCancel: false
+        });
+        
+        realReviewCount = productReviews.length;
+        if (realReviewCount > 0) {
+          realAvgRating = productReviews.reduce((sum, r) => sum + r.rating, 0) / realReviewCount;
+        }
+      } catch (error) {
+        console.log("Reviews collection not available, using product defaults");
+        realReviewCount = product.reviews || 0;
+        realAvgRating = product.rating || 4;
+      }
+      
+      // Clear existing content
       ratingContainer.innerHTML = "";
-
+      
+      // Generate stars based on real average rating
+      const roundedRating = Math.round(realAvgRating);
       for (let i = 1; i <= 5; i++) {
         const star = document.createElement("i");
         star.setAttribute("data-lucide", "star");
-        star.classList.add(i <= (product.rating || 4) ? "full" : "empty");
+        star.classList.add(i <= roundedRating ? "full" : "empty");
         ratingContainer.appendChild(star);
       }
-
+      
+      // Add review count from real reviews
       const reviewsSpan = document.createElement("span");
-      reviewsSpan.textContent = `(${product.reviews || 0} Reviews)`;
-
+      reviewsSpan.textContent = `(${realReviewCount} ${realReviewCount === 1 ? 'Review' : 'Reviews'})`;
+      
       const stockSpan = document.createElement("span");
       stockSpan.textContent = product.stock ? " | In Stock" : " | Out of Stock";
       stockSpan.style.color = product.stock ? "#4CAF50" : "#f44336";
-
+      
       ratingContainer.append(" ", reviewsSpan, " ", stockSpan);
     }
 
@@ -366,9 +390,8 @@ window.addEventListener("DOMContentLoaded", async () => {
                     ${formatPrice(related.price)}
                     ${related.oldPrice ? `<span>${formatPrice(related.oldPrice)}</span>` : ''}
                   </p>
-                  <div class="rating">
-                    ${generateStars(related.rating || 4)}
-                    <span>(${related.reviews || 0})</span>
+                  <div class="rating" data-product-id="${related.id}">
+                      <!-- Will be populated by JavaScript -->
                   </div>
                 </div>
               </a>
@@ -379,6 +402,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           // Add event listeners for related products
           addRelatedProductEventListeners();
         }
+        await updateRelatedProductsRatings();
       } catch (relatedError) {
         console.error("Error loading related products:", relatedError);
       }
@@ -394,10 +418,167 @@ window.addEventListener("DOMContentLoaded", async () => {
       window.viewedSystem.markViewed(product.id);
     }
 
+    await loadProductReviews(product.id);
+
   } catch (err) {
     console.error("Error loading product page:", err);
   }
 });
+
+// Load real reviews from reviews collection
+
+async function loadProductReviews(productId) {
+  const reviewsContainer = document.getElementById('product-reviews-section');
+  if (!reviewsContainer) return;
+  
+  try {
+    const reviews = await window.pb.collection("reviews").getFullList({
+      filter: `productId = "${productId}" && status = "approved"`,
+      sort: '-created',
+      $autoCancel: false
+    });
+    
+    // Update review count and rating in the UI
+    const ratingContainer = document.querySelector(".prod-det-text .rating");
+    if (ratingContainer) {
+      const reviewCountSpan = ratingContainer.querySelector('span:first-child');
+      if (reviewCountSpan) {
+        reviewCountSpan.textContent = `(${reviews.length} Reviews)`;
+      }
+    }
+    
+    if (reviews.length === 0) {
+      reviewsContainer.innerHTML = `
+        <div class="no-reviews-section">
+          <h3>Customer Reviews</h3>
+          <p>No reviews yet. Be the first to review this product!</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // 🔥 FETCH USER NAMES FOR ALL REVIEWS
+    const userIds = [...new Set(reviews.map(r => r.userId).filter(id => id))];
+    const userNames = new Map();
+    
+    for (const userId of userIds) {
+      try {
+        const user = await window.pb.collection("exclusive_users_collection").getOne(userId);
+        userNames.set(userId, user.name || user.email?.split('@')[0] || 'Verified Customer');
+      } catch (error) {
+        userNames.set(userId, 'Verified Customer');
+      }
+    }
+    
+    // Calculate average rating
+    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    
+    reviewsContainer.innerHTML = `
+      <div class="reviews-section">
+        <h3>Customer Reviews (${reviews.length})</h3>
+        <div class="reviews-summary">
+          <div class="avg-rating-large">
+            <span class="avg-number">${avgRating.toFixed(1)}</span>
+            <div class="stars">${generateStars(Math.round(avgRating))}</div>
+            <span>Based on ${reviews.length} reviews</span>
+          </div>
+        </div>
+        <div class="reviews-list">
+          ${reviews.map(review => {
+            const reviewerName = userNames.get(review.userId) || 'Verified Customer';
+            return `
+              <div class="review-item">
+                <div class="review-header">
+                  <div class="reviewer-info">
+                    <strong>${escapeHtml(reviewerName)}</strong>
+                    <span class="review-date">${new Date(review.date).toLocaleDateString()}</span>
+                  </div>
+                  <div class="review-rating">${generateStars(review.rating)}</div>
+                </div>
+                <h4>${escapeHtml(review.title)}</h4>
+                <p>${escapeHtml(review.comment)}</p>
+                <div class="review-helpful">
+                  <button onclick="markHelpful('${review.id}')">
+                    <i class="fas fa-thumbs-up"></i> Helpful (${review.helpful || 0})
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    
+  } catch (error) {
+    console.error('Error loading reviews:', error);
+    reviewsContainer.innerHTML = '<div class="no-reviews-section"><p>Error loading reviews. Please try again later.</p></div>';
+  }
+}
+
+// Helper function to escape HTML
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+// Mark review as helpful
+async function markHelpful(reviewId) {
+  try {
+    const review = await window.pb.collection("reviews").getOne(reviewId);
+    await window.pb.collection("reviews").update(reviewId, {
+      helpful: (review.helpful || 0) + 1
+    });
+    loadProductReviews(review.productId);
+  } catch (error) {
+    console.error('Error marking helpful:', error);
+  }
+}
+
+
+// Update ratings for related products with real data
+async function updateRelatedProductsRatings() {
+  const relatedRatings = document.querySelectorAll('.related-products-grid .rating');
+  
+  for (const ratingDiv of relatedRatings) {
+    const productId = ratingDiv.dataset.productId;
+    if (!productId) continue;
+    
+    try {
+      const reviews = await window.pb.collection("reviews").getFullList({
+        filter: `productId = "${productId}" && status = "approved"`,
+        $autoCancel: false
+      });
+      
+      const reviewCount = reviews.length;
+      let avgRating = 4;
+      if (reviewCount > 0) {
+        avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+      }
+      
+      ratingDiv.innerHTML = `
+        ${generateStars(Math.round(avgRating))}
+        <span>(${reviewCount})</span>
+      `;
+    } catch (error) {
+      // Fallback to default
+      ratingDiv.innerHTML = `
+        ${generateStars(4)}
+        <span>(0)</span>
+      `;
+    }
+  }
+  
+  // Re-render Lucide icons
+  if (typeof lucide !== "undefined") {
+    lucide.createIcons();
+  }
+}
+
 
 // Function to add event listeners to related products
 function addRelatedProductEventListeners() {
@@ -545,6 +726,8 @@ function showNotification(message, type) {
   }, 2000);
 }
 
+
+
 // ---------------- FORMAT PB PRODUCT ----------------
 function formatPBProduct(p) {
   let mainImage = '/images/placeholder.jpg';
@@ -645,3 +828,5 @@ function generateStars(rating) {
   }
   return stars;
 }
+
+

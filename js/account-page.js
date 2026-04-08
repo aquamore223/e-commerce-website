@@ -474,28 +474,28 @@ async function loadUserReviews() {
         }
         
         // Display reviews
-        reviewsList.innerHTML = reviews.map(review => `
+            reviewsList.innerHTML = reviews.map(review => `
             <div class="review-card" data-review-id="${review.id}">
                 <div class="review-product-info">
-                    <img src="${review.productImage || '/images/placeholder.jpg'}" alt="${review.productName}" onerror="this.src='/images/placeholder.jpg'">
-                    <div>
-                        <h4>${escapeHtml(review.productName)}</h4>
-                        <div class="review-rating">${generateStars(review.rating)}</div>
-                        <span class="review-date">${new Date(review.date).toLocaleDateString()}</span>
-                    </div>
+                <img src="${review.productImage || '/images/placeholder.jpg'}" onerror="this.src='/images/placeholder.jpg'">
+                <div>
+                    <h4>${escapeHtml(review.productName)}</h4>
+                    <div class="review-rating">${generateStars(review.rating)}</div>
+                    <span class="review-date">${new Date(review.created || review.date).toLocaleDateString()}</span>
+                </div>
                 </div>
                 <div class="review-content">
-                    <h4>${escapeHtml(review.title)}</h4>
-                    <p>${escapeHtml(review.comment)}</p>
-                    <div class="review-footer">
-                        <span class="helpful-count"><i class="fas fa-thumbs-up"></i> ${review.helpful || 0} found helpful</span>
-                        <span class="review-status ${review.status || 'pending'}">${review.status || 'pending'}</span>
-                        <button class="edit-review-btn" onclick="editReview('${review.id}')">Edit Review</button>
-                        <button class="delete-review-btn" onclick="deleteReview('${review.id}')">Delete</button>
-                    </div>
+                <h4>${escapeHtml(review.title)}</h4>
+                <p>${escapeHtml(review.comment)}</p>
+                <div class="review-footer">
+                    <span class="helpful-count"><i class="fas fa-thumbs-up"></i> ${review.helpful || 0} found helpful</span>
+                    <span class="review-status ${review.status || 'pending'}">${review.status || 'pending'}</span>
+                    <button class="edit-review-btn" onclick="editReview('${review.id}')">Edit Review</button>
+                    <button class="delete-review-btn" onclick="deleteReview('${review.id}')">Delete</button>
+                </div>
                 </div>
             </div>
-        `).join('');
+            `).join('');
         
     } catch (error) {
         console.error("Error loading reviews:", error);
@@ -1004,21 +1004,88 @@ window.closeModal = function() {
 
 // Cancel order
 window.cancelOrder = async function(orderId) {
-    if (confirm('Are you sure you want to cancel this order?')) {
-        try {
-            if (!window.pb) {
-                window.pb = new PocketBase('https://itrain.services.hodessy.com');
-            }
-            
-            await window.pb.collection('orders').update(orderId, {
-                orderStatus: 'cancelled'
-            });
-            alert('Order cancelled successfully');
-            loadOrders('normal');
-        } catch (error) {
-            console.error('Error cancelling order:', error);
-            alert('Error cancelling order');
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    
+    try {
+        if (!window.pb) {
+            window.pb = new PocketBase('https://itrain.services.hodessy.com');
         }
+        
+        console.log("Attempting to cancel order:", orderId);
+        
+        // First, verify the order exists and is pending
+        let order;
+        try {
+            order = await window.pb.collection("orders").getOne(orderId, {
+                $autoCancel: false
+            });
+            console.log("Order found:", order);
+        } catch (checkError) {
+            console.error("Error finding order:", checkError);
+            alert('Order not found. Please refresh the page.');
+            return;
+        }
+        
+        // Check if order can be cancelled (only pending orders)
+        if (order.orderStatus !== 'pending') {
+            alert(`Cannot cancel order with status: ${order.orderStatus}. Only pending orders can be cancelled.`);
+            // Refresh the orders display
+            if (typeof loadOrders === 'function') {
+                // Try to call the paginated version
+                if (window.currentActiveSection) {
+                    await loadOrders(window.currentActiveSection, 1);
+                } else {
+                    await loadOrders('normal', 1);
+                }
+            }
+            return;
+        }
+        
+        // Update order status to cancelled
+        const updatedOrder = await window.pb.collection("orders").update(orderId, {
+            orderStatus: 'cancelled',
+            updated: new Date().toISOString()
+        }, {
+            $autoCancel: false
+        });
+        
+        console.log("Order cancelled successfully:", updatedOrder);
+        alert('Order cancelled successfully');
+        
+        // Clear all caches
+        if (typeof paginationState !== 'undefined') {
+            paginationState.orders.cache = [];
+            paginationState.cancellations.cache = [];
+            paginationState.returns.cache = [];
+        }
+        
+        // Reload orders - use the paginated version
+        if (typeof loadOrders === 'function') {
+            if (window.currentActiveSection) {
+                await loadOrders(window.currentActiveSection, 1);
+            } else {
+                await loadOrders('normal', 1);
+            }
+        }
+        
+        // Also refresh the page to ensure UI is in sync
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+        
+    } catch (error) {
+        console.error("Error cancelling order:", error);
+        
+        let errorMessage = 'Error cancelling order';
+        if (error.status === 404) {
+            errorMessage = 'Order not found. Please refresh the page and try again.';
+        } else if (error.status === 403) {
+            errorMessage = 'You do not have permission to cancel this order.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        alert(errorMessage);
     }
 };
 
@@ -1222,6 +1289,7 @@ const paginationState = {
 
 let currentActiveSection = 'orders';
 
+window.currentActiveSection = currentActiveSection;
 // ==================== ORDERS SECTION WITH PAGINATION ====================
 
 async function loadOrders(type = 'normal', page = 1) {
@@ -1411,6 +1479,13 @@ async function loadOrders(type = 'normal', page = 1) {
                                 <button onclick="trackOrder('${order.id}')" class="btn-track-order">
                                     <i class="fas fa-truck"></i> Track Order
                                 </button>
+                            ` : ''}
+                            ${order.orderStatus === 'delivered' ? `
+                                <div class="review-action">
+                                    <button onclick="showWriteReviewModal('${order.id}')" class="btn-write-review">
+                                        <i class="fas fa-star"></i> Write a Review
+                                    </button>
+                                </div>
                             ` : ''}
                             ${order.orderStatus === 'pending' ? `<button onclick="cancelOrder('${order.id}')" class="btn-cancel-order">Cancel Order</button>` : ''}
                         </div>
@@ -1703,6 +1778,315 @@ function createReviewsSection() {
     `;
     accountContent.appendChild(reviewsSection);
 }
+
+// ==================== REVIEW MANAGEMENT ====================
+
+// Show write review modal for a specific order
+async function showWriteReviewModal(orderId) {
+    try {
+        const order = await window.pb.collection('orders').getOne(orderId);
+        const user = window.authSystem?.getUser();
+        
+        let items = order.items;
+        if (typeof items === 'string') {
+            items = JSON.parse(items);
+        }
+        
+        // 🔥 Check which products the user has already reviewed
+        const userReviews = await window.pb.collection("reviews").getFullList({
+            filter: `userId = "${user.id}"`,
+            $autoCancel: false
+        });
+        
+        const reviewedProductIds = new Set(userReviews.map(r => r.productId));
+        
+        // Filter out already reviewed products
+        const unreviewedItems = items.filter(item => !reviewedProductIds.has(item.id));
+        
+        if (unreviewedItems.length === 0) {
+            showNotification('You have already reviewed all products in this order!', 'info');
+            return;
+        }
+        
+        // Create modal HTML (same as before, but only show unreviewed products)
+        const modal = document.createElement('div');
+        modal.className = 'review-modal';
+        modal.innerHTML = `
+            <div class="review-modal-content">
+                <div class="modal-header">
+                    <h3>Write a Review</h3>
+                    <button class="close-modal-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Select a product to review:</p>
+                    <div class="products-to-review">
+                        ${unreviewedItems.map(item => `
+                            <div class="product-to-review" data-product-id="${item.id}" data-product-name="${escapeHtml(item.name)}" data-product-img="${item.img || '/images/placeholder.jpg'}">
+                                <img src="${item.img || '/images/placeholder.jpg'}" onerror="this.src='/images/placeholder.jpg'">
+                                <div class="product-info">
+                                    <strong>${escapeHtml(item.name)}</strong>
+                                    ${item.color ? `<br><small>Color: ${item.color}</small>` : ''}
+                                    ${item.size ? `<small>Size: ${item.size}</small>` : ''}
+                                </div>
+                                <button class="select-product-btn">Select</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div id="review-form-container" style="display: none;">
+                        <div class="form-group">
+                            <label>Your Rating</label>
+                            <div class="star-rating-write">
+                                ${[1,2,3,4,5].map(star => `<span class="star" data-value="${star}">★</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Review Title</label>
+                            <input type="text" id="review-title" placeholder="e.g., Great product!">
+                        </div>
+                        <div class="form-group">
+                            <label>Your Review</label>
+                            <textarea id="review-comment" rows="4" placeholder="Share your experience with this product..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn">Cancel</button>
+                    <button class="submit-review-btn" style="display: none;">Submit Review</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Rest of the modal logic (same as before)
+        let selectedProduct = null;
+        let selectedRating = 0;
+        
+        modal.querySelectorAll('.select-product-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const productDiv = btn.closest('.product-to-review');
+                selectedProduct = {
+                    id: productDiv.dataset.productId,
+                    name: productDiv.dataset.productName,
+                    img: productDiv.dataset.productImg
+                };
+                
+                modal.querySelectorAll('.product-to-review').forEach(p => p.classList.remove('selected'));
+                productDiv.classList.add('selected');
+                modal.querySelector('#review-form-container').style.display = 'block';
+                modal.querySelector('.submit-review-btn').style.display = 'block';
+            });
+        });
+        
+        const stars = modal.querySelectorAll('.star-rating-write .star');
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                selectedRating = parseInt(star.dataset.value);
+                stars.forEach(s => {
+                    if (parseInt(s.dataset.value) <= selectedRating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+        
+        modal.querySelector('.close-modal-btn').onclick = () => modal.remove();
+        modal.querySelector('.cancel-btn').onclick = () => modal.remove();
+        
+        modal.querySelector('.submit-review-btn').onclick = async () => {
+            if (!selectedProduct) {
+                alert('Please select a product');
+                return;
+            }
+            if (selectedRating === 0) {
+                alert('Please select a rating');
+                return;
+            }
+            
+            const title = modal.querySelector('#review-title').value.trim();
+            const comment = modal.querySelector('#review-comment').value.trim();
+            
+            if (!title || !comment) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            await submitReview(selectedProduct.id, selectedProduct.name, selectedProduct.img, selectedRating, title, comment);
+            modal.remove();
+        };
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading order details');
+    }
+}
+
+
+// Submit review to PocketBase
+
+async function submitReview(productId, productName, productImage, rating, title, comment) {
+    const user = window.authSystem?.getUser();
+    if (!user) {
+        alert('Please login to submit a review');
+        return;
+    }
+    
+    try {
+        // Check if user already reviewed this product
+        const existingReviews = await window.pb.collection("reviews").getFullList({
+            filter: `userId = "${user.id}" && productId = "${productId}"`,
+            $autoCancel: false
+        });
+        
+        if (existingReviews.length > 0) {
+            showNotification('You have already reviewed this product. You can edit your existing review.', 'error');
+            if (confirm('Would you like to edit your existing review?')) {
+                editReview(existingReviews[0].id);
+            }
+            return;
+        }
+        
+        // 🔥 Get user's name for display
+        const userName = user.name || user.email?.split('@')[0] || 'Verified Customer';
+        
+        const review = await window.pb.collection("reviews").create({
+            userId: user.id,
+            userName: userName,  // 🔥 Store user name
+            productId: productId,
+            productName: productName,
+            productImage: productImage,
+            rating: rating,
+            title: title,
+            comment: comment,
+            date: new Date().toISOString(),
+            helpful: 0,
+            status: 'approved'
+        });
+        
+        console.log("Review saved:", review);
+        showNotification('Review submitted successfully!', 'success');
+        
+        // Reload reviews
+        await loadUserReviews();
+        
+        // Also refresh any product page that might be open
+        if (window.location.pathname.includes('product-details.html')) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productIdFromUrl = urlParams.get('id');
+            if (productIdFromUrl === productId && typeof loadProductReviews === 'function') {
+                await loadProductReviews(productId);
+            }
+        }
+        
+    } catch (error) {
+        console.error("Error saving review:", error);
+        showNotification('Error saving review: ' + error.message, 'error');
+    }
+}
+
+// Edit review
+window.editReview = async function(reviewId) {
+    try {
+        const review = await window.pb.collection("reviews").getOne(reviewId);
+        
+        const modal = document.createElement('div');
+        modal.className = 'review-modal';
+        modal.innerHTML = `
+            <div class="review-modal-content">
+                <div class="modal-header">
+                    <h3>Edit Your Review</h3>
+                    <button class="close-modal-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Rating</label>
+                        <div class="star-rating-edit" data-rating="${review.rating}">
+                            ${[1,2,3,4,5].map(star => `<span class="star" data-value="${star}">★</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="edit-review-title" value="${escapeHtml(review.title)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Review</label>
+                        <textarea id="edit-review-comment" rows="4">${escapeHtml(review.comment)}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn">Cancel</button>
+                    <button class="save-btn">Save Changes</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        let selectedRating = review.rating;
+        const stars = modal.querySelectorAll('.star-rating-edit .star');
+        
+        stars.forEach(star => {
+            if (parseInt(star.dataset.value) <= selectedRating) {
+                star.classList.add('active');
+            }
+            star.addEventListener('click', () => {
+                selectedRating = parseInt(star.dataset.value);
+                stars.forEach(s => {
+                    if (parseInt(s.dataset.value) <= selectedRating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+        
+        modal.querySelector('.close-modal-btn').onclick = () => modal.remove();
+        modal.querySelector('.cancel-btn').onclick = () => modal.remove();
+        modal.querySelector('.save-btn').onclick = async () => {
+            const updatedTitle = modal.querySelector('#edit-review-title').value.trim();
+            const updatedComment = modal.querySelector('#edit-review-comment').value.trim();
+            
+            if (!updatedTitle || !updatedComment) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                await window.pb.collection("reviews").update(reviewId, {
+                    rating: selectedRating,
+                    title: updatedTitle,
+                    comment: updatedComment,
+                    date: new Date().toISOString()
+                });
+                
+                showNotification('Review updated successfully!', 'success');
+                await loadUserReviews();
+                modal.remove();
+            } catch (error) {
+                showNotification('Error updating review', 'error');
+            }
+        };
+        
+    } catch (error) {
+        showNotification('Error loading review', 'error');
+    }
+};
+
+// Delete review
+window.deleteReview = async function(reviewId) {
+    if (!confirm('Are you sure you want to delete this review?')) return;
+    
+    try {
+        await window.pb.collection("reviews").delete(reviewId);
+        showNotification('Review deleted successfully!', 'success');
+        await loadUserReviews();
+    } catch (error) {
+        showNotification('Error deleting review', 'error');
+    }
+};
+
 
 // Add pagination container to orders section in HTML
 function addOrdersPaginationContainer() {

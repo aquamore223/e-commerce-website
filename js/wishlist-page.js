@@ -1,4 +1,4 @@
-// wishlist-page.js - Fully dynamic wishlist page with PocketBase support and Pagination
+// wishlist-page.js - Fully dynamic wishlist page with PocketBase support, Pagination, and Real Reviews
 
 document.addEventListener('DOMContentLoaded', function() {
     initWishlistPage();
@@ -141,7 +141,6 @@ function setupWishlistPagination() {
             `;
         }
     } else {
-        // First page
         paginationHTML += `
             <button class="page-number ${1 === currentPage ? 'active' : ''}" data-page="1">1</button>
         `;
@@ -150,7 +149,6 @@ function setupWishlistPagination() {
             paginationHTML += '<span class="page-ellipsis">...</span>';
         }
         
-        // Pages around current
         let start = Math.max(2, currentPage - 1);
         let end = Math.min(totalPages - 1, currentPage + 1);
         
@@ -166,7 +164,6 @@ function setupWishlistPagination() {
             paginationHTML += '<span class="page-ellipsis">...</span>';
         }
         
-        // Last page
         paginationHTML += `
             <button class="page-number ${totalPages === currentPage ? 'active' : ''}" data-page="${totalPages}">
                 ${totalPages}
@@ -199,12 +196,10 @@ function setupWishlistPagination() {
     
     paginationContainer.innerHTML = paginationHTML;
     
-    // Attach pagination events
     attachWishlistPaginationEvents(totalPages);
 }
 
 function attachWishlistPaginationEvents(totalPages) {
-    // Previous button
     const prevBtn = document.querySelector('#wishlist-pagination .prev-page');
     if (prevBtn) {
         prevBtn.onclick = () => {
@@ -217,7 +212,6 @@ function attachWishlistPaginationEvents(totalPages) {
         };
     }
     
-    // Next button
     const nextBtn = document.querySelector('#wishlist-pagination .next-page');
     if (nextBtn) {
         nextBtn.onclick = () => {
@@ -230,7 +224,6 @@ function attachWishlistPaginationEvents(totalPages) {
         };
     }
     
-    // Page number buttons
     const pageNumbers = document.querySelectorAll('#wishlist-pagination .page-number');
     pageNumbers.forEach(btn => {
         btn.onclick = () => {
@@ -244,7 +237,6 @@ function attachWishlistPaginationEvents(totalPages) {
         };
     });
     
-    // Per page selector
     const perPageSelect = document.querySelector('#wishlist-pagination .per-page-select');
     if (perPageSelect) {
         perPageSelect.onchange = (e) => {
@@ -257,7 +249,6 @@ function attachWishlistPaginationEvents(totalPages) {
 }
 
 function setupEventListeners() {
-    // Delete item from wishlist
     document.addEventListener('click', function(e) {
         const deleteBtn = e.target.closest('.delete-btn');
         if (deleteBtn) {
@@ -267,7 +258,6 @@ function setupEventListeners() {
             return;
         }
         
-        // Add to cart from wishlist
         const cartBtn = e.target.closest('.add-to-cart-btn');
         if (cartBtn) {
             e.preventDefault();
@@ -277,14 +267,12 @@ function setupEventListeners() {
         }
     });
     
-    // Move all to cart button
     const moveAllBtn = document.querySelector('.wishlist-main .wish-hd .shadow-btn');
     if (moveAllBtn) {
         moveAllBtn.removeEventListener('click', moveAllToCart);
         moveAllBtn.addEventListener('click', moveAllToCart);
     }
     
-    // Just For You - View All button
     const viewAllBtn = document.querySelectorAll('.wish-hd .shadow-btn')[1];
     if (viewAllBtn) {
         viewAllBtn.addEventListener('click', function() {
@@ -296,30 +284,18 @@ function setupEventListeners() {
 function deleteFromWishlist(productId) {
     if (!productId) return;
     
-    // Get current wishlist
     let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-    
-    // Filter out the item
     wishlist = wishlist.filter(item => item.id != productId);
-    
-    // Save back to localStorage
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
     
-    // Show feedback
     showNotification('Item removed from wishlist');
-    
-    // Reset to first page
     currentPage = 1;
-    
-    // Reload the wishlist items
     loadWishlistItems();
     updateWishlistCount();
     loadJustForYou();
     
-    // Dispatch event for other pages
     document.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: wishlist }));
     
-    // Update wishlistSystem if exists
     if (window.wishlistSystem) {
         window.wishlistSystem.items = wishlist;
         window.wishlistSystem.updateCount();
@@ -329,18 +305,14 @@ function deleteFromWishlist(productId) {
 async function addToCartFromWishlist(productId, btnElement) {
     if (!productId) return;
     
-    // Get product details from wishlist
     const wishlist = await getWishlist();
     const product = wishlist.find(item => item.id == productId);
     
     if (!product) return;
     
-    // Check if cart system exists
     if (window.cartSystem) {
-        // Add to cart
         await window.cartSystem.addToCart(productId);
         
-        // Show button feedback
         const originalText = btnElement.innerHTML;
         btnElement.innerHTML = '<i data-lucide="check" width="14" height="14"></i> Added';
         btnElement.classList.add('added');
@@ -379,29 +351,19 @@ async function moveAllToCart(e) {
         return;
     }
     
-    // Add all items to cart
     for (const item of wishlist) {
         await window.cartSystem.addToCart(item.id);
     }
     
-    // Clear wishlist
     localStorage.setItem('wishlist', JSON.stringify([]));
-    
-    // Show success message
     showNotification(`Added ${wishlist.length} items to cart`);
-    
-    // Reset to first page
     currentPage = 1;
-    
-    // Reload wishlist items
     await loadWishlistItems();
     updateWishlistCount();
     await loadJustForYou();
     
-    // Dispatch event
     document.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: [] }));
     
-    // Update wishlistSystem if exists
     if (window.wishlistSystem) {
         window.wishlistSystem.items = [];
         window.wishlistSystem.updateCount();
@@ -411,25 +373,19 @@ async function moveAllToCart(e) {
 async function getWishlist() {
     try {
         const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-        
-        // Process each wishlist item to ensure it has full details
         const processedWishlist = [];
         
         for (const item of wishlist) {
-            // If item is just an ID (string/number), fetch full details
             if (typeof item === 'string' || typeof item === 'number') {
                 const fullProduct = await fetchProductDetails(item.toString());
                 if (fullProduct) {
                     processedWishlist.push(fullProduct);
                 }
-            } 
-            // If it's already an object but missing details, fetch full details
-            else if (item.id && (!item.name || !item.price)) {
+            } else if (item.id && (!item.name || !item.price)) {
                 const fullProduct = await fetchProductDetails(item.id);
                 if (fullProduct) {
                     processedWishlist.push(fullProduct);
                 } else {
-                    // Keep original if fetch fails
                     processedWishlist.push({
                         id: item.id || '0',
                         name: item.name || 'Product',
@@ -439,9 +395,7 @@ async function getWishlist() {
                         oldPrice: item.oldPrice || null
                     });
                 }
-            }
-            // Already has all details
-            else {
+            } else {
                 processedWishlist.push({
                     id: item.id || '0',
                     name: item.name || 'Product',
@@ -461,12 +415,6 @@ async function getWishlist() {
 }
 
 async function fetchProductDetails(productId) {
-    // Try local products first
-    if (typeof products !== 'undefined' && products[productId]) {
-        return products[productId];
-    }
-    
-    // Try PocketBase
     if (window.pb) {
         try {
             const pbProduct = await window.pb.collection("exclusive_ecommerce").getOne(productId);
@@ -485,7 +433,6 @@ async function fetchProductDetails(productId) {
             console.error("Error fetching from PocketBase:", error);
         }
     }
-    
     return null;
 }
 
@@ -507,7 +454,6 @@ function updateWishlistCount() {
     const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
     const count = wishlist.length;
     
-    // Update count in header
     const headerCount = document.querySelector('.wish-count');
     if (headerCount) {
         if (count > 0) {
@@ -518,7 +464,6 @@ function updateWishlistCount() {
         }
     }
     
-    // Update count in wishlist page header
     const pageCount = document.querySelector('.wishlist-main .wish-hd h4 span');
     if (pageCount) {
         pageCount.textContent = `(${count})`;
@@ -526,7 +471,6 @@ function updateWishlistCount() {
 }
 
 function showNotification(message, type = 'success') {
-    // Check if notification container exists, if not create it
     let notification = document.querySelector('.wishlist-notification');
     
     if (!notification) {
@@ -534,7 +478,6 @@ function showNotification(message, type = 'success') {
         notification.className = 'wishlist-notification';
         document.body.appendChild(notification);
         
-        // Add styles
         notification.style.cssText = `
             position: fixed;
             top: 20px;
@@ -550,17 +493,14 @@ function showNotification(message, type = 'success') {
         `;
     }
     
-    // Set color based on type
     notification.style.background = type === 'success' ? '#4CAF50' : '#f44336';
     notification.textContent = message;
     
-    // Show notification
     setTimeout(() => {
         notification.style.opacity = '1';
         notification.style.transform = 'translateX(0)';
     }, 10);
     
-    // Hide after 2 seconds
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transform = 'translateX(100%)';
@@ -571,13 +511,11 @@ async function loadJustForYou() {
     const container = document.querySelector('.just-for-you');
     if (!container) return;
 
-    // Get wishlist IDs to exclude
     const wishlist = await getWishlist();
     const wishlistIds = wishlist.map(item => String(item.id));
     
     let allProducts = [];
     
-    // Try to get products from PocketBase first
     if (window.pb) {
         try {
             const pbProducts = await window.pb.collection("exclusive_ecommerce").getFullList({
@@ -591,66 +529,82 @@ async function loadJustForYou() {
                 price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
                 img: getProductImage(p),
                 oldPrice: p.oldPrice,
-                tag: p.flashSale ? "-SALE" : (p.newArrival ? "NEW" : ""),
-                rating: p.rating || 4,
-                reviews: p.reviews || 0
+                tag: p.flashSale ? "-SALE" : (p.newArrival ? "NEW" : "")
             }));
         } catch (error) {
             console.error("Error fetching from PocketBase:", error);
         }
     }
     
-    // Fallback to local products if PocketBase fails or has no products
-    if (allProducts.length === 0 && typeof products !== 'undefined') {
-        allProducts = Object.values(products);
-    }
-    
-    // Filter out wishlist items and randomize
     const recommendations = allProducts
         .filter(p => !wishlistIds.includes(String(p.id)))
         .sort(() => 0.5 - Math.random())
         .slice(0, 4);
-
+    
     if (recommendations.length === 0) {
         container.innerHTML = '<p style="text-align:center; grid-column:1/-1; padding:40px;">No recommendations available</p>';
         return;
     }
-
-    container.innerHTML = recommendations.map(p => `
-        <div class="scroll">
-            <a href="/product-details.html?id=${p.id}">
-                <div class="scroll-img-section">
-                    <img src="${p.img}" alt="${p.name}" onerror="this.src='/images/placeholder.jpg'">
-                    ${p.tag ? `<span class="scroll-tag">${p.tag}</span>` : ""}
-                    
-                    <div class="scroll-icon">
-                        <span class="heart-icon" data-id="${p.id}">
-                            <i data-lucide="heart" width="15" height="15"></i>
-                        </span>
-                        <span class="eye-icon" data-id="${p.id}">
-                            <i data-lucide="eye" width="15" height="15"></i>
-                        </span>
+    
+    // Fetch real review data for recommendations
+    let reviewsMap = new Map();
+    try {
+        const allReviews = await window.pb.collection("reviews").getFullList({
+            filter: 'status = "approved"',
+            $autoCancel: false
+        });
+        
+        allReviews.forEach(review => {
+            if (!reviewsMap.has(review.productId)) {
+                reviewsMap.set(review.productId, []);
+            }
+            reviewsMap.get(review.productId).push(review);
+        });
+    } catch (error) {
+        console.log("No reviews yet");
+    }
+    
+    container.innerHTML = recommendations.map(p => {
+        const productReviews = reviewsMap.get(p.id) || [];
+        const reviewCount = productReviews.length;
+        let avgRating = 4;
+        if (reviewCount > 0) {
+            avgRating = productReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+        }
+        
+        return `
+            <div class="scroll">
+                <a href="/product-details.html?id=${p.id}">
+                    <div class="scroll-img-section">
+                        <img src="${p.img}" alt="${p.name}" onerror="this.src='/images/placeholder.jpg'">
+                        ${p.tag ? `<span class="scroll-tag">${p.tag}</span>` : ""}
+                        <div class="scroll-icon">
+                            <span class="heart-icon" data-id="${p.id}">
+                                <i data-lucide="heart" width="15" height="15"></i>
+                            </span>
+                            <span class="eye-icon" data-id="${p.id}">
+                                <i data-lucide="eye" width="15" height="15"></i>
+                            </span>
+                        </div>
+                        <button class="add-to-cart-btn" data-id="${p.id}">
+                            <i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart
+                        </button>
                     </div>
-
-                    <button class="add-to-cart-btn" data-id="${p.id}">
-                        <i data-lucide="shopping-cart" width="14" height="14"></i> Add to Cart
-                    </button>
-                </div>
-            </a>
-
-            <div class="scroll-text">
-                <h5>${p.name}</h5>
-                <p>
-                    ${formatPrice(p.price)}
-                    ${p.oldPrice ? `<span>${formatPrice(p.oldPrice)}</span>` : ""}
-                </p>
-                <div class="rating">
-                    ${generateStars(p.rating || 4)}
-                    <span>(${p.reviews || 0})</span>
+                </a>
+                <div class="scroll-text">
+                    <h5>${p.name}</h5>
+                    <p>
+                        ${formatPrice(p.price)}
+                        ${p.oldPrice ? `<span>${formatPrice(p.oldPrice)}</span>` : ""}
+                    </p>
+                    <div class="rating">
+                        ${generateStars(Math.round(avgRating))}
+                        <span>(${reviewCount})</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     if (typeof lucide !== 'undefined') {
         setTimeout(() => lucide.createIcons(), 50);
@@ -667,13 +621,13 @@ function formatPrice(price) {
 
 function generateStars(rating) {
     let stars = '';
+    const starRating = Math.round(rating || 4);
     for (let i = 1; i <= 5; i++) {
-        stars += `<i data-lucide="star" class="${i <= rating ? 'full' : 'empty'}"></i>`;
+        stars += `<i data-lucide="star" class="${i <= starRating ? 'full' : 'empty'}"></i>`;
     }
     return stars;
 }
 
-// Export for use in other files
 window.wishlistPage = {
     reload: loadWishlistItems,
     deleteItem: deleteFromWishlist,
