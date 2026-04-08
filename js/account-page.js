@@ -1089,6 +1089,140 @@ window.cancelOrder = async function(orderId) {
     }
 };
 
+// ==================== CANCEL ORDER MODAL FUNCTIONS ====================
+
+// Store the order ID to cancel
+let pendingCancelOrderId = null;
+
+// Show cancel confirmation modal
+window.showCancelModal = function(orderId, orderDetails = {}) {
+    pendingCancelOrderId = orderId;
+    
+    const modal = document.getElementById('cancel-order-modal');
+    const detailsContainer = document.getElementById('cancel-order-details');
+    
+    if (detailsContainer) {
+        detailsContainer.innerHTML = `
+            <div class="info-row" style="margin-bottom: 8px; text-align: left;">
+                <strong>Order #:</strong> ${orderId.slice(-8).toUpperCase()}
+            </div>
+            ${orderDetails.total ? `<div class="info-row" style="text-align: left;"><strong>Total:</strong> ${window.formatPrice ? window.formatPrice(orderDetails.total) : '$' + orderDetails.total}</div>` : ''}
+        `;
+    }
+    
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+// Close cancel modal
+window.closeCancelModal = function() {
+    const modal = document.getElementById('cancel-order-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    pendingCancelOrderId = null;
+}
+
+// Cancel order with modal (called from the cancel button)
+window.cancelOrder = async function(orderId) {
+    try {
+        if (!window.pb) {
+            window.pb = new PocketBase('https://itrain.services.hodessy.com');
+        }
+        
+        const order = await window.pb.collection("orders").getOne(orderId, {
+            $autoCancel: false
+        });
+        
+        // Show modal with order details
+        showCancelModal(orderId, {
+            total: order.total
+        });
+        
+        // Set up confirm button handler
+        const confirmBtn = document.getElementById('confirm-cancel-btn');
+        if (confirmBtn) {
+            // Remove existing listener to avoid duplicates
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            newConfirmBtn.onclick = async () => {
+                await processCancelOrder(orderId);
+                closeCancelModal();
+            };
+        }
+        
+    } catch (error) {
+        console.error("Error fetching order details:", error);
+        // Fallback: show modal without details
+        showCancelModal(orderId, {});
+        
+        const confirmBtn = document.getElementById('confirm-cancel-btn');
+        if (confirmBtn) {
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            newConfirmBtn.onclick = async () => {
+                await processCancelOrder(orderId);
+                closeCancelModal();
+            };
+        }
+    }
+}
+
+// Process the actual cancellation
+async function processCancelOrder(orderId) {
+    try {
+        if (!window.pb) {
+            window.pb = new PocketBase('https://itrain.services.hodessy.com');
+        }
+        
+        console.log("Processing cancellation for order:", orderId);
+        
+        // Update order status to cancelled
+        const updatedOrder = await window.pb.collection("orders").update(orderId, {
+            orderStatus: 'cancelled',
+            updated: new Date().toISOString()
+        }, {
+            $autoCancel: false
+        });
+        
+        console.log("Order cancelled successfully:", updatedOrder);
+        showNotification('Order cancelled successfully!', 'success');
+        
+        // Clear all caches
+        if (typeof paginationState !== 'undefined') {
+            paginationState.orders.cache = [];
+            paginationState.cancellations.cache = [];
+            paginationState.returns.cache = [];
+        }
+        
+        // Reload orders
+        if (typeof loadOrders === 'function') {
+            if (window.currentActiveSection) {
+                await loadOrders(window.currentActiveSection, 1);
+            } else {
+                await loadOrders('normal', 1);
+            }
+        }
+        
+    } catch (error) {
+        console.error("Error cancelling order:", error);
+        
+        let errorMessage = 'Error cancelling order';
+        if (error.status === 404) {
+            errorMessage = 'Order not found. Please refresh the page and try again.';
+        } else if (error.status === 403) {
+            errorMessage = 'You do not have permission to cancel this order.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        showNotification(errorMessage, 'error');
+    }
+}
+
 // Initialize account page
 document.addEventListener('DOMContentLoaded', () => {
     // Load orders when page loads

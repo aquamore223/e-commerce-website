@@ -141,6 +141,30 @@
                 <div id="orders-list"></div>
                 <div id="orders-pagination"></div> <!-- Add this line -->
             </div>
+
+            <!-- Cancel Order Confirmation Modal (Same style as view details) -->
+            <div id="cancel-order-modal" class="order-modal" style="display: none;">
+                <div class="order-modal-content" style="max-width: 450px;">
+                    <div class="order-modal-header">
+                        <h2>Cancel Order</h2>
+                        <button class="order-modal-close" onclick="closeCancelModal()">&times;</button>
+                    </div>
+                    <div class="order-modal-body" style="text-align: center;">
+                        <div style="font-size: 48px; color: #dc3545; margin-bottom: 20px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <p style="font-size: 16px; margin-bottom: 10px;">Are you sure you want to cancel this order?</p>
+                        <p style="color: #dc3545; font-size: 14px; margin-bottom: 20px;">This action cannot be undone.</p>
+                        <div id="cancel-order-details" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <!-- Order details will be inserted here -->
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding: 20px; border-top: 1px solid #f0f0f0;">
+                        <button class="btn-secondary close-modal-btn" onclick="closeCancelModal()" style="background: #6c757d; color: white; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer;">No, Keep It</button>
+                        <button class="btn-danger" id="confirm-cancel-btn" style="background: #dc3545; color: white; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer;">Yes, Cancel Order</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
   </main>
