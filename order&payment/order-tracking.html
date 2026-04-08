@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
-    <script src="/js/utils.js"></script>
     <style>
         * {
             margin: 0;
@@ -413,7 +411,7 @@
             <h1>Track Your Order</h1>
             <p>Enter your order ID to track your order status</p>
             <div class="search-box">
-                <input type="text" id="order-id-input" placeholder="Enter Order ID (e.g., ORD-123456)" autocomplete="off">
+                <input type="text" id="order-id-input" placeholder="Enter Order ID" autocomplete="off">
                 <button onclick="trackOrder()">
                     <i class="fas fa-search"></i> Track Order
                 </button>
@@ -426,36 +424,32 @@
 
     <div id="footer"></div>
 
+    <!-- Scripts - Order matters! -->
+    <script src="/js/utils.js"></script>
+    <script src="/js/cart.js"></script>
+    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
+    <script src="/js/payment.js"></script>
+    <script src="/js/checkout.js"></script>
+    <script src="/js/user.js"></script> 
+    <script src="../js/index.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <script>
-        // Initialize PocketBase
-        const pb = new PocketBase('https://itrain.services.hodessy.com');
-        
-        // Load header and footer
-        async function loadComponents() {
-            try {
-                const headerRes = await fetch('/header.html');
-                const footerRes = await fetch('/footer.html');
-                const headerHtml = await headerRes.text();
-                const footerHtml = await footerRes.text();
-                document.getElementById('header').innerHTML = headerHtml;
-                document.getElementById('footer').innerHTML = footerHtml;
-                
-                // Reinitialize any scripts in header/footer
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            } catch (error) {
-                console.error('Error loading components:', error);
-            }
-        }
+        // DO NOT declare pb here - it's already declared in index.js
+        // Just wait for it to be available
         
         // Track order by ID
-        async function trackOrder() {
-            const orderIdInput = document.getElementById('order-id-input').value.trim();
+        async function trackOrder(orderId = null) {
+            const orderIdInput = orderId || document.getElementById('order-id-input').value.trim();
             const orderDetailsDiv = document.getElementById('order-details');
             
             if (!orderIdInput) {
                 alert('Please enter an order ID');
                 return;
             }
+            
+            // Update input field
+            document.getElementById('order-id-input').value = orderIdInput;
             
             // Show loading state
             orderDetailsDiv.innerHTML = `
@@ -466,24 +460,45 @@
             `;
             orderDetailsDiv.style.display = 'block';
             
+            // Wait for pb to be available
+            let retries = 0;
+            while (!window.pb && retries < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+            
+            if (!window.pb) {
+                orderDetailsDiv.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>System Error</h3>
+                        <p>Unable to connect to the server. Please refresh the page.</p>
+                    </div>
+                `;
+                return;
+            }
+            
             try {
-                // Try to find order by full ID or partial
+                console.log('Tracking order:', orderIdInput);
+                
+                // Try to find order by ID
                 let order = null;
                 
                 try {
-                    // Try direct lookup if it's a full PocketBase ID
-                    order = await pb.collection('orders').getOne(orderIdInput, {
+                    order = await window.pb.collection('orders').getOne(orderIdInput, {
                         $autoCancel: false
                     });
+                    console.log('Order found by direct ID');
                 } catch (e) {
-                    // Try searching by order_id field or partial match
-                    const orders = await pb.collection('orders').getFullList({
-                        filter: `id ~ "${orderIdInput}" || orderId ~ "${orderIdInput}"`,
+                    console.log('Direct lookup failed, trying search...');
+                    const orders = await window.pb.collection('orders').getFullList({
+                        filter: `id ~ "${orderIdInput}"`,
                         $autoCancel: false
                     });
                     
                     if (orders.length > 0) {
                         order = orders[0];
+                        console.log('Order found by search');
                     }
                 }
                 
@@ -494,8 +509,8 @@
                         <div class="error-message">
                             <i class="fas fa-search"></i>
                             <h3>Order Not Found</h3>
-                            <p>We couldn't find an order with ID: <strong>${orderIdInput}</strong></p>
-                            <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #db4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Try Again</button>
+                            <p>We couldn't find an order with ID: <strong>${escapeHtml(orderIdInput)}</strong></p>
+                            <button onclick="resetSearch()" class="back-btn" style="margin-top: 20px;">Try Another ID</button>
                         </div>
                     `;
                 }
@@ -506,8 +521,8 @@
                     <div class="error-message">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Error Loading Order</h3>
-                        <p>${error.message}</p>
-                        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #db4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Try Again</button>
+                        <p>${escapeHtml(error.message)}</p>
+                        <button onclick="resetSearch()" class="back-btn" style="margin-top: 20px;">Try Again</button>
                     </div>
                 `;
             }
@@ -562,7 +577,7 @@
                                     <i class="fas ${getStepIcon(step)}"></i>
                                 </div>
                                 <div class="step-label">${step.charAt(0).toUpperCase() + step.slice(1)}</div>
-                                <div class="step-date">${index <= currentStepIndex ? getStepDate(order, step) : 'Pending'}</div>
+                                <div class="step-date">${index <= currentStepIndex ? 'Completed' : 'Pending'}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -580,10 +595,10 @@
                         <h3>Order Information</h3>
                         <div class="info-row"><strong>Order ID:</strong> ${displayOrderId}</div>
                         <div class="info-row"><strong>Date:</strong> ${new Date(order.created).toLocaleString()}</div>
-                        <div class="info-row"><strong>Payment Method:</strong> ${order.paymentMethod?.replace('_', ' ').toUpperCase() || 'N/A'}</div>
+                        <div class="info-row"><strong>Payment Method:</strong> ${(order.paymentMethod || 'N/A').replace('_', ' ').toUpperCase()}</div>
                         <div class="info-row"><strong>Payment Status:</strong> 
-                            <span style="color: ${order.paymentStatus === 'paid' ? '#28a745' : '#ff9800'}">
-                                ${order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+                            <span style="color: ${order.paymentStatus === 'paid' ? '#28a745' : '#ff9800'}; font-weight: 600;">
+                                ${order.paymentStatus === 'paid' ? '✓ Paid' : '⏳ Pending'}
                             </span>
                         </div>
                     </div>
@@ -603,9 +618,9 @@
                         <thead>
                             <tr>
                                 <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Subtotal</th>
+                                <th style="text-align: center;">Quantity</th>
+                                <th style="text-align: right;">Unit Price</th>
+                                <th style="text-align: right;">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -621,16 +636,16 @@
                                             </div>
                                         </div>
                                      </div>
-                                    <td>${item.quantity || item.qty}</td>
-                                    <td>${window.formatPrice ? window.formatPrice(item.price) : '$' + parseFloat(item.price).toFixed(2)}</td>
-                                    <td>${window.formatPrice ? window.formatPrice((item.quantity || item.qty) * item.price) : '$' + ((item.quantity || item.qty) * parseFloat(item.price)).toFixed(2)}</td>
+                                    <td style="text-align: center;">${item.quantity || item.qty}</td>
+                                    <td style="text-align: right;">${window.formatPrice ? window.formatPrice(item.price) : '$' + parseFloat(item.price).toFixed(2)}</td>
+                                    <td style="text-align: right;">${window.formatPrice ? window.formatPrice((item.quantity || item.qty) * item.price) : '$' + ((item.quantity || item.qty) * parseFloat(item.price)).toFixed(2)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                         <tfoot>
                             <tr class="total-row">
                                 <td colspan="3" style="text-align: right;"><strong>Total:</strong></td>
-                                <td><strong>${window.formatPrice ? window.formatPrice(order.total) : '$' + parseFloat(order.total).toFixed(2)}</strong></td>
+                                <td style="text-align: right;"><strong>${window.formatPrice ? window.formatPrice(order.total) : '$' + parseFloat(order.total).toFixed(2)}</strong></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -648,8 +663,6 @@
             `;
             
             orderDetailsDiv.innerHTML = html;
-            
-            // Scroll to order details
             orderDetailsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
@@ -662,19 +675,6 @@
                 'delivered': 'fa-check-circle'
             };
             return icons[step] || 'fa-circle';
-        }
-        
-        // Get date for each status step
-        function getStepDate(order, step) {
-            // You can add actual dates if you store them in the order
-            // For now, return appropriate messages
-            const dates = {
-                'pending': new Date(order.created).toLocaleDateString(),
-                'processing': order.processingStartedAt ? new Date(order.processingStartedAt).toLocaleDateString() : 'Processing soon',
-                'shipped': order.shippedAt ? new Date(order.shippedAt).toLocaleDateString() : 'Shipping soon',
-                'delivered': order.deliveredAt ? new Date(order.deliveredAt).toLocaleDateString() : 'Delivery pending'
-            };
-            return dates[step] || '—';
         }
         
         // Reset search
@@ -695,23 +695,33 @@
             });
         }
         
-        // Check URL for orderId parameter
-        function checkUrlForOrderId() {
+        // Auto-track from URL parameter
+        async function autoTrackFromUrl() {
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('orderId');
+            
             if (orderId) {
+                console.log('Auto-tracking order from URL:', orderId);
                 document.getElementById('order-id-input').value = orderId;
-                trackOrder();
+                // Wait a bit for everything to load
+                setTimeout(() => {
+                    trackOrder(orderId);
+                }, 1000);
             }
         }
         
-        // Initialize page
-        async function init() {
-            await loadComponents();
-            checkUrlForOrderId();
-        }
-        
-        init();
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM ready, setting up tracking');
+            
+            // Initialize Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            // Auto-track if orderId in URL
+            autoTrackFromUrl();
+        });
     </script>
 </body>
 </html>
