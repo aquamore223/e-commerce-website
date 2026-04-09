@@ -12,53 +12,49 @@ class CartSystem {
       this.renderCheckout();
     });
 
-    /* ADD TO CART BUTTONS - Updated to handle both regular and detailed adds */
-    // In cart.js, replace the add to cart button click handler (around line 25-50)
+    // ADD TO CART BUTTONS - Instant feedback
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".add-to-cart-btn");
+      if (!btn) return;
 
-/* ADD TO CART BUTTONS - Updated for instant feedback */
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".add-to-cart-btn");
-  if (!btn) return;
+      const id = btn.dataset.id;
+      if (!id) return;
 
-  const id = btn.dataset.id;
-  if (!id) return;
+      // INSTANT VISUAL FEEDBACK
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Added!';
+      btn.classList.add("added");
+      btn.disabled = true;
 
-  // INSTANT VISUAL FEEDBACK - change button text immediately
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '<i class="fas fa-check"></i> Added!';
-  btn.classList.add("added");
-  btn.disabled = true;
+      const color = btn.dataset.color || null;
+      const size = btn.dataset.size || null;
+      const qty = parseInt(btn.dataset.qty) || 1;
 
-  // Check if there's additional data (color, size) stored on the button
-  const color = btn.dataset.color || null;
-  const size = btn.dataset.size || null;
-  const qty = parseInt(btn.dataset.qty) || 1;
+      try {
+        if (color || size) {
+          await this.addToCartWithDetails({
+            id: id,
+            color: color,
+            size: size,
+            qty: qty
+          });
+        } else {
+          await this.addToCart(id);
+        }
+      } catch (error) {
+        console.error("Error adding to cart:", error);
+        btn.innerHTML = originalText;
+        btn.classList.remove("added");
+      } finally {
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove("added");
+          btn.disabled = false;
+        }, 1000);
+      }
+    });
 
-  try {
-    if (color || size) {
-      await this.addToCartWithDetails({
-        id: id,
-        color: color,
-        size: size,
-        qty: qty
-      });
-    } else {
-      await this.addToCart(id);
-    }
-  } catch (error) {
-    console.error("Error adding to cart:", error);
-    btn.innerHTML = originalText;
-    btn.classList.remove("added");
-  } finally {
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.classList.remove("added");
-      btn.disabled = false;
-    }, 1000);
-  }
-});
-
-    /* QUANTITY CHANGE */
+    // QUANTITY CHANGE
     document.addEventListener("change", (e) => {
       if (!e.target.classList.contains("qty-input")) return;
 
@@ -78,7 +74,6 @@ document.addEventListener("click", async (e) => {
   }
 
   async addToCart(productId) {
-    // Try to get product from PocketBase first
     let product = null;
     
     if (window.pb) {
@@ -98,7 +93,6 @@ document.addEventListener("click", async (e) => {
       }
     }
     
-    // Fallback to local products object
     if (!product && typeof products !== 'undefined' && products[productId]) {
       product = products[productId];
     }
@@ -123,17 +117,14 @@ document.addEventListener("click", async (e) => {
     this.renderCheckout();
   }
 
-  // NEW METHOD: Add to cart with full details (color, size, quantity)
   async addToCartWithDetails(item) {
     if (!item || !item.id) return;
     
     console.log("Adding to cart with details:", item);
     
-    // Try to get full product details if only ID was provided
     let product = item;
     
     if (!item.name || !item.price) {
-      // Fetch product details from PocketBase
       if (window.pb) {
         try {
           const pbProduct = await window.pb.collection("exclusive_ecommerce").getOne(item.id);
@@ -158,7 +149,6 @@ document.addEventListener("click", async (e) => {
       }
     }
     
-    // Check if item already exists in cart (with same color and size)
     const existing = this.cart.find(cartItem => 
       cartItem.id === product.id && 
       cartItem.color === product.color && 
@@ -182,7 +172,6 @@ document.addEventListener("click", async (e) => {
     this.saveCart();
     this.renderCheckout();
     
-    // Show notification with details
     let details = [];
     if (product.color) details.push(product.color);
     if (product.size) details.push(product.size);
@@ -219,7 +208,7 @@ document.addEventListener("click", async (e) => {
     const total = this.cart.reduce((sum, item) => sum + item.qty, 0);
 
     if (total > 0) {
-      count.style.display = "block";
+      count.style.display = "flex";
       count.textContent = total > 99 ? "99+" : total;
     } else {
       count.style.display = "none";
@@ -241,7 +230,6 @@ document.addEventListener("click", async (e) => {
       const itemTotal = item.price * item.qty;
       subtotal += itemTotal;
       
-      // Display color and size if available
       let details = '';
       if (item.color) details += `<span class="item-color">${item.color}</span>`;
       if (item.size) details += `<span class="item-size">${item.size}</span>`;
@@ -355,11 +343,20 @@ class WishlistSystem {
       try {
         const pbProduct = await window.pb.collection("exclusive_ecommerce").getOne(productId);
         if (pbProduct) {
+          let imageUrl = pbProduct.image;
+          if (imageUrl && typeof imageUrl === 'string') {
+            if (imageUrl.startsWith('/')) {
+              imageUrl = window.pb.files.getURL(pbProduct, imageUrl);
+            }
+          } else if (imageUrl && Array.isArray(imageUrl) && imageUrl.length > 0) {
+            imageUrl = window.pb.files.getURL(pbProduct, imageUrl[0]);
+          }
+          
           return {
             id: pbProduct.id,
             name: pbProduct.name,
             price: typeof pbProduct.price === 'number' ? pbProduct.price : parseFloat(pbProduct.price) || 0,
-            img: this.getProductImage(pbProduct),
+            img: imageUrl || '/images/placeholder.jpg',
           };
         }
       } catch (error) {
@@ -372,26 +369,12 @@ class WishlistSystem {
       return {
         id: productId,
         name: productCard.querySelector("h5")?.textContent || "Product",
-        price: parseFloat(productCard.querySelector("p")?.textContent.replace("$", "")) || 0,
-        img: productCard.querySelector("img")?.src || "",
+        price: parseFloat(productCard.querySelector(".price")?.textContent?.replace("$", "") || "0"),
+        img: productCard.querySelector("img")?.src || "/images/placeholder.jpg",
       };
     }
 
     return null;
-  }
-
-  getProductImage(product) {
-    if (product.image) {
-      if (typeof product.image === 'string') {
-        if (product.image.startsWith('http')) {
-          return product.image;
-        }
-        return window.pb.files.getURL(product, product.image);
-      } else if (Array.isArray(product.image) && product.image.length > 0) {
-        return window.pb.files.getURL(product, product.image[0]);
-      }
-    }
-    return '/images/placeholder.jpg';
   }
 
   save() {
@@ -407,7 +390,7 @@ class WishlistSystem {
     const total = this.items.length;
 
     if (total > 0) {
-      countEl.style.display = "block";
+      countEl.style.display = "flex";
       countEl.textContent = total > 99 ? "99+" : total;
     } else {
       countEl.style.display = "none";
@@ -475,7 +458,6 @@ document.addEventListener("click", (e) => {
     const productId = heart.dataset.id;
     if (!productId) return;
 
-    // Update icon immediately for visual feedback
     const icon = heart.querySelector("i");
     if (icon) {
       const willBeWishlisted = !window.wishlistSystem?.isWishlisted(productId);
@@ -526,9 +508,38 @@ document.addEventListener("DOMContentLoaded", () => {
       icon.classList.add("viewed");
     }
   });
+  
+  // Update cart count
+  if (window.cartSystem) {
+    window.cartSystem.updateCartCount();
+  }
 });
 
-console.log("✅ Cart.js loaded successfully");
+// MutationObserver for dynamically added content
+const observer = new MutationObserver(() => {
+  if (window.wishlistSystem) {
+    window.wishlistSystem.updateAllIcons();
+  }
+  if (window.viewedSystem) {
+    window.viewedSystem.updateAllEyeIcons();
+  }
+});
+
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Event listeners for updates
+document.addEventListener("cartUpdated", () => {
+  window.cartSystem?.updateCartCount();
+});
+
+document.addEventListener("wishlistUpdated", () => {
+  window.wishlistSystem?.updateAllIcons();
+  window.wishlistSystem?.updateCount();
+});
+
+document.addEventListener("viewedUpdated", () => {
+  window.viewedSystem?.updateAllEyeIcons();
+});
 
 /* ---------------- CHECKOUT AUTHENTICATION CHECK ---------------- */
 
@@ -575,11 +586,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Make the function globally available
 window.checkAuthBeforeCheckout = checkAuthBeforeCheckout;
-document.addEventListener("cartUpdated", () => {
-  window.cartSystem?.updateCartCount();
-});
 
-document.addEventListener("wishlistUpdated", () => {
-  window.wishlistSystem?.updateAllIcons();
-  window.wishlistSystem?.updateCount();
-});
+console.log("✅ Cart.js loaded successfully");
