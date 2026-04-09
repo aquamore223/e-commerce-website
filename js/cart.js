@@ -1,7 +1,11 @@
 // ==================== CART SYSTEM ====================
+
 class CartSystem {
   constructor() {
     this.cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    this.updateCartCount();
+    this.renderCheckout();
 
     document.addEventListener("DOMContentLoaded", () => {
       this.updateCartCount();
@@ -9,40 +13,50 @@ class CartSystem {
     });
 
     /* ADD TO CART BUTTONS - Updated to handle both regular and detailed adds */
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest(".add-to-cart-btn");
-      if (!btn) return;
+    // In cart.js, replace the add to cart button click handler (around line 25-50)
 
-      const id = btn.dataset.id;
-      if (!id) return;
+/* ADD TO CART BUTTONS - Updated for instant feedback */
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".add-to-cart-btn");
+  if (!btn) return;
 
-      // Check if there's additional data (color, size) stored on the button
-      const color = btn.dataset.color || null;
-      const size = btn.dataset.size || null;
-      const qty = parseInt(btn.dataset.qty) || 1;
+  const id = btn.dataset.id;
+  if (!id) return;
 
-      if (color || size) {
-        // If we have color/size info, use the detailed method
-        await this.addToCartWithDetails({
-          id: id,
-          color: color,
-          size: size,
-          qty: qty
-        });
-      } else {
-        // Otherwise use regular method
-        await this.addToCart(id);
-      }
+  // INSTANT VISUAL FEEDBACK - change button text immediately
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-check"></i> Added!';
+  btn.classList.add("added");
+  btn.disabled = true;
 
-      const originalText = btn.textContent;
-      btn.textContent = "✔ Added";
-      btn.classList.add("added");
+  // Check if there's additional data (color, size) stored on the button
+  const color = btn.dataset.color || null;
+  const size = btn.dataset.size || null;
+  const qty = parseInt(btn.dataset.qty) || 1;
 
-      setTimeout(() => {
-        btn.textContent = originalText;
-        btn.classList.remove("added");
-      }, 1000);
-    });
+  try {
+    if (color || size) {
+      await this.addToCartWithDetails({
+        id: id,
+        color: color,
+        size: size,
+        qty: qty
+      });
+    } else {
+      await this.addToCart(id);
+    }
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+    btn.innerHTML = originalText;
+    btn.classList.remove("added");
+  } finally {
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.classList.remove("added");
+      btn.disabled = false;
+    }, 1000);
+  }
+});
 
     /* QUANTITY CHANGE */
     document.addEventListener("change", (e) => {
@@ -561,3 +575,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Make the function globally available
 window.checkAuthBeforeCheckout = checkAuthBeforeCheckout;
+document.addEventListener("cartUpdated", () => {
+  window.cartSystem?.updateCartCount();
+});
+
+document.addEventListener("wishlistUpdated", () => {
+  window.wishlistSystem?.updateAllIcons();
+  window.wishlistSystem?.updateCount();
+});
