@@ -9,7 +9,7 @@ class CartPage {
     this.render();
     this.events();
 
-    // Listen for cart updates
+    // Listen for cart updates from other components
     document.addEventListener("cartUpdated", () => {
       this.cart = JSON.parse(localStorage.getItem("cart")) || [];
       this.render();
@@ -112,7 +112,7 @@ class CartPage {
       }
     });
 
-    // Remove item
+    // Remove item - FIXED: Immediate removal and count update
     document.addEventListener("click", (e) => {
       if (e.target.classList.contains("remove-item")) {
         const id = e.target.dataset.id;
@@ -120,12 +120,25 @@ class CartPage {
         const size = e.target.dataset.size;
         
         // Remove item with matching id, color, and size
-        this.cart = this.cart.filter(p => 
-          !(p.id == id && 
-            (p.color || '') === (color || '') && 
-            (p.size || '') === (size || ''))
+        const index = this.cart.findIndex(p => 
+          p.id == id && 
+          (p.color || '') === (color || '') && 
+          (p.size || '') === (size || '')
         );
-        this.save();
+        
+        if (index !== -1) {
+          // Store the item name for notification
+          const itemName = this.cart[index].name;
+          
+          // Remove the item
+          this.cart.splice(index, 1);
+          
+          // Save and update everything
+          this.save();
+          
+          // Show feedback (optional)
+          this.showDeleteNotification(`${itemName} removed from cart`);
+        }
       }
     });
     
@@ -152,26 +165,75 @@ class CartPage {
     }
   }
 
+  showDeleteNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'cart-notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff4444;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => notification.remove(), 300);
+    }, 2000);
+  }
+
   save() {
+    // Save to localStorage
     localStorage.setItem("cart", JSON.stringify(this.cart));
     
-    // Update cart count in header
-    const totalCount = this.cart.reduce((sum, item) => sum + item.qty, 0);
+    // IMPORTANT: Update cart count in header using the global cartSystem if available
+    this.updateHeaderCartCount();
+    
+    // Re-render the cart page
+    this.render();
+    
+    // Dispatch event for other components (like header, other pages)
+    document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
+    
+    // Also trigger storage event for cross-tab sync
+    window.dispatchEvent(new Event('storage'));
+  }
+  
+  updateHeaderCartCount() {
+    // Calculate total items
+    const totalCount = this.cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+    
+    // Try to update using the global cartSystem first (most reliable)
+    if (window.cartSystem && typeof window.cartSystem.updateCartCount === 'function') {
+      window.cartSystem.cart = this.cart;
+      window.cartSystem.updateCartCount();
+      console.log("Cart count updated via cartSystem:", totalCount);
+      return;
+    }
+    
+    // Fallback: Directly update the DOM element
     const countEl = document.querySelector(".cart-count");
     if (countEl) {
       if (totalCount > 0) {
-        countEl.style.display = "block";
+        countEl.style.display = "flex";
+        countEl.style.visibility = "visible";
         countEl.textContent = totalCount > 99 ? "99+" : totalCount;
+        console.log("Cart count updated directly:", totalCount);
       } else {
         countEl.style.display = "none";
+        console.log("Cart count hidden - cart is empty");
       }
+    } else {
+      console.warn("Cart count element (.cart-count) not found in DOM");
     }
-    
-    // Re-render
-    this.render();
-    
-    // Dispatch event for other components
-    document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
   }
 }
 
