@@ -2019,7 +2019,7 @@ async function submitReview(productId, productName, productImage, rating, title,
             const urlParams = new URLSearchParams(window.location.search);
             const productIdFromUrl = urlParams.get('id');
             if (productIdFromUrl === productId && typeof loadProductReviews === 'function') {
-                await loadProductReviews(productId);
+                await loadProductReviews(product.id, 'recent', 5);
             }
         }
         
