@@ -701,6 +701,11 @@ color: white;
     background-color:hsl(7, 78%, 60%);
 
 }
+
+.gen-btn a,#top-marg a{
+    text-decoration: none;
+    color: white;
+}
 .category{
     margin:30px 150px;
     gap:10px;
