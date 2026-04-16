@@ -66,6 +66,34 @@ class AuthSystem {
                 li.textContent.toLowerCase().includes('sign up') ||
                 li.querySelector('a')?.href.includes('signup')
             );
+        
+        // Error message elements
+        this.dom.loginError = document.getElementById('login-error');
+        this.dom.signupError = document.getElementById('signup-error');
+    }
+
+    // ==================== SHOW ERROR MESSAGE ====================
+    showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }, 5000);
+        }
+    }
+
+    hideError(elementId) {
+        const errorElement = document.getElementById(elementId);
+        if (errorElement) {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        }
     }
 
     // ==================== HANDLE HASH NAVIGATION ====================
@@ -95,6 +123,7 @@ class AuthSystem {
                     this.cacheDOM();
                     if (this.dom.signupContainer) this.dom.signupContainer.style.display = "none";
                     if (this.dom.signinContainer) this.dom.signinContainer.style.display = "flex";
+                    this.hideError('login-error');
                     console.log("🔁 Login link: Switched to SIGN IN form");
                 } else {
                     // If on another page, redirect to signup page with login hash
@@ -109,7 +138,13 @@ class AuthSystem {
         if (err?.data) {
             return Object.values(err.data).map(e => e.message).join(", ");
         }
-        return err.message || "Something went wrong";
+        if (err?.message?.includes('Failed to authenticate')) {
+            return "Invalid email or password. Please try again.";
+        }
+        if (err?.message?.includes('user with this email already exists')) {
+            return "An account with this email already exists. Please login instead.";
+        }
+        return err.message || "Something went wrong. Please try again.";
     }
 
     // ==================== AUTH CHECK ====================
@@ -124,8 +159,6 @@ class AuthSystem {
                         .getOne(userId, {
                             $autoCancel: false
                         });
-
-                    
                 }
             } else {
                 this.currentUser = null;
@@ -144,6 +177,24 @@ class AuthSystem {
 
     // ==================== SIGNUP ====================
     async signup(name, email, password) {
+        this.hideError('signup-error');
+        
+        // Validation
+        if (!name || name.trim() === '') {
+            this.showError('signup-error', 'Please enter your name');
+            return { success: false, error: 'Please enter your name' };
+        }
+        
+        if (!email || email.trim() === '') {
+            this.showError('signup-error', 'Please enter your email');
+            return { success: false, error: 'Please enter your email' };
+        }
+        
+        if (!password || password.length < 8) {
+            this.showError('signup-error', 'Password must be at least 8 characters');
+            return { success: false, error: 'Password must be at least 8 characters' };
+        }
+        
         try {
             const user = await this.pb.collection(this.COLLECTION_NAME).create({
                 name,
@@ -157,82 +208,88 @@ class AuthSystem {
             return { success: true };
 
         } catch (err) {
-            return { success: false, error: this.formatError(err) };
+            const errorMsg = this.formatError(err);
+            this.showError('signup-error', errorMsg);
+            return { success: false, error: errorMsg };
         }
     }
-                       // redirect function
-        handleRedirectAfterLogin() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let redirectUrl = urlParams.get('redirect');
-            
-            if (!redirectUrl) {
-                redirectUrl = sessionStorage.getItem('redirectAfterCheckout');
-            }
-            
-            if (redirectUrl && this.isLoggedIn()) {
-                sessionStorage.removeItem('redirectAfterCheckout');
-                window.location.href = decodeURIComponent(redirectUrl);
-                return true;
-            }
-            return false;
+
+    
+   // ==================== LOGIN ====================
+async login(email, password) {
+    this.hideError('login-error');
+    
+    // Validation
+    if (!email || email.trim() === '') {
+        this.showError('login-error', 'Please enter your email');
+        return { success: false, error: 'Please enter your email' };
+    }
+    
+    if (!password || password.trim() === '') {
+        this.showError('login-error', 'Please enter your password');
+        return { success: false, error: 'Please enter your password' };
+    }
+    
+    try {
+        console.log("Attempting login for:", email);
+        
+        const auth = await this.pb.collection(this.COLLECTION_NAME)
+            .authWithPassword(email, password);
+
+        console.log("Login successful:", auth.record.id);
+        
+        this.currentUser = auth.record;
+        sessionStorage.setItem('userLoggedIn', 'true');
+        this.updateUI();
+
+        // Dispatch auth changed event for cart/wishlist systems
+        document.dispatchEvent(new CustomEvent('authChanged', { 
+            detail: { isLoggedIn: true, user: this.currentUser } 
+        }));
+
+        document.dispatchEvent(new CustomEvent('authStatusChanged', {
+            detail: { isLoggedIn: true }
+        }));
+
+        // Handle redirect after login
+        const urlParams = new URLSearchParams(window.location.search);
+        let redirectUrl = urlParams.get('redirect');
+        
+        if (!redirectUrl || redirectUrl === 'null') {
+            redirectUrl = sessionStorage.getItem('redirectAfterCheckout');
         }
-
-  // Update your login method
-    async login(email, password) {
-        try {
-            const auth = await this.pb.collection(this.COLLECTION_NAME)
-                .authWithPassword(email, password);
-
-            this.currentUser = auth.record;
-            sessionStorage.setItem('userLoggedIn', 'true');
-            this.updateUI();
-
-            document.dispatchEvent(new CustomEvent('authStatusChanged', {
-                detail: { isLoggedIn: true }
-            }));
-
-            // Handle redirect after login
-            const urlParams = new URLSearchParams(window.location.search);
-            let redirectUrl = urlParams.get('redirect');
-            
-            if (!redirectUrl) {
-                redirectUrl = sessionStorage.getItem('redirectAfterCheckout');
-            }
-            
-            if (redirectUrl) {
-                sessionStorage.removeItem('redirectAfterCheckout');
-                window.location.href = decodeURIComponent(redirectUrl);
-            }
-
+        
+        if (redirectUrl && redirectUrl !== 'null' && redirectUrl !== 'undefined') {
+            sessionStorage.removeItem('redirectAfterCheckout');
+            console.log("Redirecting to:", redirectUrl);
+            window.location.href = decodeURIComponent(redirectUrl);
             return { success: true };
-
-        } catch (err) {
-            return { success: false, error: this.formatError(err) };
         }
-    }
+        
+        // Default redirect to homepage
+        console.log("No valid redirect URL, going to homepage");
+        window.location.href = "/index.html";
+        
+        return { success: true };
 
-    // ==================== LOGIN ====================
-    async login(email, password) {
-        try {
-            const auth = await this.pb.collection(this.COLLECTION_NAME)
-                .authWithPassword(email, password);
-
-            this.currentUser = auth.record;
-
-            sessionStorage.setItem('userLoggedIn', 'true');
-
-            this.updateUI();
-
-            document.dispatchEvent(new CustomEvent('authStatusChanged', {
-                detail: { isLoggedIn: true }
-            }));
-
-            return { success: true };
-
-        } catch (err) {
-            return { success: false, error: this.formatError(err) };
+    } catch (err) {
+        console.error("Login error details:", err);
+        
+        // Show incorrect username/password warning
+        let errorMsg = "Invalid email or password. Please try again.";
+        
+        if (err?.status === 400) {
+            errorMsg = "Invalid email or password. Please try again.";
+        } else if (err?.message?.includes('Failed to authenticate')) {
+            errorMsg = "Invalid email or password. Please try again.";
+        } else if (err?.data) {
+            errorMsg = this.formatError(err);
         }
+        
+        this.showError('login-error', errorMsg);
+        return { success: false, error: errorMsg };
     }
+}
 
     // ==================== LOGOUT ====================
     logout() {
@@ -242,6 +299,11 @@ class AuthSystem {
         sessionStorage.clear();
 
         this.updateUI();
+
+        // 🔥 Dispatch auth changed event for cart/wishlist systems
+        document.dispatchEvent(new CustomEvent('authChanged', { 
+            detail: { isLoggedIn: false, user: null } 
+        }));
 
         document.dispatchEvent(new CustomEvent('authStatusChanged', {
             detail: { isLoggedIn: false }
@@ -277,6 +339,8 @@ class AuthSystem {
 
                 if (this.dom.signupContainer) this.dom.signupContainer.style.display = "none";
                 if (this.dom.signinContainer) this.dom.signinContainer.style.display = "flex";
+                this.hideError('login-error');
+                this.hideError('signup-error');
 
                 console.log("🔁 Switched to SIGN IN");
             }
@@ -287,6 +351,8 @@ class AuthSystem {
 
                 if (this.dom.signinContainer) this.dom.signinContainer.style.display = "none";
                 if (this.dom.signupContainer) this.dom.signupContainer.style.display = "flex";
+                this.hideError('login-error');
+                this.hideError('signup-error');
 
                 console.log("🔁 Switched to SIGN UP");
             }
@@ -306,13 +372,20 @@ class AuthSystem {
                 const email = document.getElementById("signup-email").value;
                 const password = document.getElementById("signup-password").value;
 
+                const btn = signupForm.querySelector("button");
+                const originalText = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = "Signing up...";
+
                 const res = await this.signup(name, email, password);
 
                 if (res.success) {
-                    alert("Signup successful!");
-                    location.href = "/index.html";
+                    alert("Signup successful! Welcome!");
+                    window.location.href = "/index.html";
                 } else {
-                    alert(res.error);
+                    // Error already shown in signup method
+                    btn.disabled = false;
+                    btn.textContent = originalText;
                 }
             });
         }
@@ -325,17 +398,18 @@ class AuthSystem {
                 const password = document.getElementById("login-password").value;
 
                 const btn = signinForm.querySelector("button");
+                const originalText = btn.textContent;
                 btn.disabled = true;
                 btn.textContent = "Logging in...";
 
                 const res = await this.login(email, password);
 
                 if (res.success) {
-                    location.href = "/index.html";
+                    // Redirect handled in login method
                 } else {
-                    alert(res.error);
+                    // Error already shown in login method
                     btn.disabled = false;
-                    btn.textContent = "Login";
+                    btn.textContent = originalText;
                 }
             });
         }
@@ -367,26 +441,31 @@ class AuthSystem {
     }
 }
 
-    (function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectUrl = urlParams.get('redirect');
-            const showLogin = urlParams.get('show') === 'login';
-            
-            // Store redirect URL for after login
-            if (redirectUrl) {
-                sessionStorage.setItem('redirectAfterCheckout', redirectUrl);
+// ==================== URL PARAM HANDLER ====================
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectUrl = urlParams.get('redirect');
+    const showLogin = urlParams.get('show') === 'login';
+    
+    // Store redirect URL for after login
+    if (redirectUrl) {
+        sessionStorage.setItem('redirectAfterCheckout', redirectUrl);
+    }
+    
+    // Show login form if requested
+    if (showLogin) {
+        const checkForms = setInterval(() => {
+            const signupDiv = document.getElementById('signup-form');
+            const signinDiv = document.getElementById('signin-form');
+            if (signupDiv && signinDiv) {
+                signupDiv.style.display = 'none';
+                signinDiv.style.display = 'flex';
+                clearInterval(checkForms);
             }
-            
-            // Show login form if requested
-            if (showLogin) {
-                const signupDiv = document.getElementById('signup-form');
-                const signinDiv = document.getElementById('signin-form');
-                if (signupDiv && signinDiv) {
-                    signupDiv.style.display = 'none';
-                    signinDiv.style.display = 'flex';
-                }
-            }
-        })();
+        }, 100);
+    }
+})();
+
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
     window.authSystem = new AuthSystem();
@@ -400,3 +479,5 @@ window.auth = {
     isLoggedIn: () => window.authSystem?.isLoggedIn(),
     getUser: () => window.authSystem?.getUser()
 };
+
+console.log("✅ Auth system loaded with error messages and cart/wishlist sync support");

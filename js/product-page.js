@@ -1,41 +1,138 @@
-// ==================== REVIEW LIKE SYSTEM ====================
+// ==================== REVIEW LIKE SYSTEM (WITH DATABASE STORAGE) ====================
 
 class ReviewLikeSystem {
   constructor() {
-    this.getUserLikes();
-    this.setupEventListeners();
+    this.userId = null;
+    this.likedReviews = [];
+    this.isInitialized = false;
+    
+    this.init();
   }
   
-  getUserLikes() {
+  async init() {
+    await this.waitForAuth();
     this.userId = this.getCurrentUserId();
-    const storageKey = `review_likes_${this.userId}`;
-    this.likedReviews = JSON.parse(localStorage.getItem(storageKey)) || [];
-    console.log(`Loaded ${this.likedReviews.length} liked reviews for user ${this.userId}`);
+    
+    if (this.userId) {
+      await this.loadLikesFromDatabase();
+    } else {
+      this.loadGuestLikes();
+    }
+    
+    this.setupEventListeners();
+    this.setupAuthListener();
+    this.initializeButtons();
+    
+    this.isInitialized = true;
+    console.log(`ReviewLikeSystem initialized for user: ${this.userId || 'guest'}`);
+  }
+  
+  waitForAuth() {
+    return new Promise((resolve) => {
+      const check = setInterval(() => {
+        if (window.authSystem && window.authSystem.currentUser) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 100);
+
+      // fallback after 5s
+      setTimeout(() => {
+        clearInterval(check);
+        resolve();
+      }, 5000);
+    });
   }
   
   getCurrentUserId() {
-    if (window.authSystem && window.authSystem.currentUser) {
-      return window.authSystem.currentUser.id;
+    return window.authSystem?.currentUser?.id || null;
+  }
+  
+  loadGuestLikes() {
+    const storageKey = 'guest_review_likes';
+    this.likedReviews = JSON.parse(localStorage.getItem(storageKey)) || [];
+    console.log(`Loaded ${this.likedReviews.length} guest likes`);
+  }
+  
+  saveGuestLikes() {
+    const storageKey = 'guest_review_likes';
+    localStorage.setItem(storageKey, JSON.stringify(this.likedReviews));
+  }
+  
+  async loadLikesFromDatabase() {
+    if (!this.userId || !window.pb) return;
+    
+    try {
+      const likes = await window.pb.collection("user_review_likes").getFullList({
+        filter: `userId = "${this.userId}"`,
+        $autoCancel: false
+      });
+      
+      this.likedReviews = likes.map(like => like.reviewId);
+      console.log(`Loaded ${this.likedReviews.length} liked reviews from database`);
+    } catch (error) {
+      console.error('Error loading likes from database:', error);
+      this.likedReviews = [];
     }
-    let sessionId = sessionStorage.getItem('guest_session_id');
-    if (!sessionId) {
-      sessionId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      sessionStorage.setItem('guest_session_id', sessionId);
-    }
-    return sessionId;
+  }
+  
+  setupAuthListener() {
+    document.addEventListener('authChanged', async () => {
+      const newUserId = this.getCurrentUserId();
+      
+      if (newUserId && !this.userId) {
+        // User logged in - merge guest likes
+        console.log('User logged in, merging review likes...');
+        const guestLikes = [...this.likedReviews];
+        this.userId = newUserId;
+        await this.loadLikesFromDatabase();
+        
+        // Merge guest likes with database likes
+        for (const reviewId of guestLikes) {
+          if (!this.likedReviews.includes(reviewId)) {
+            try {
+              await this.addLikeToDatabase(reviewId);
+              this.likedReviews.push(reviewId);
+            } catch (e) {
+              console.error('Error merging like:', e);
+            }
+          }
+        }
+        
+        localStorage.removeItem('guest_review_likes');
+        this.initializeButtons();
+        
+      } else if (!newUserId && this.userId) {
+        // User logged out
+        console.log('User logged out, saving likes to guest storage...');
+        this.saveGuestLikes();
+        this.userId = null;
+        this.initializeButtons();
+      }
+    });
   }
   
   setupEventListeners() {
     document.addEventListener('click', async (e) => {
       const likeBtn = e.target.closest('.review-like-btn');
-      if (likeBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const reviewId = likeBtn.dataset.reviewId;
-        if (reviewId) {
-          await this.toggleLike(reviewId, likeBtn);
-        }
+      if (!likeBtn) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const reviewId = likeBtn.dataset.reviewId;
+      if (!reviewId) return;
+      
+      // Check if user is logged in
+      if (!this.userId && !window.authSystem?.currentUser) {
+        this.showNotification('Please log in to like reviews', 'info');
+        setTimeout(() => {
+          window.location.href = '/user/signup.html?show=login';
+        }, 1500);
+        return;
       }
+      
+      await this.toggleLike(reviewId, likeBtn);
     });
   }
   
@@ -44,13 +141,23 @@ class ReviewLikeSystem {
     
     try {
       if (isLiked) {
-        await this.updateHelpfulCount(reviewId, -1);
+        // Unlike
+        if (this.userId) {
+          await this.removeLikeFromDatabase(reviewId);
+        } else {
+          this.removeGuestLike(reviewId);
+        }
         this.removeLocalLike(reviewId);
         this.updateButtonUI(buttonElement, false);
         this.updateLikeCountDisplay(reviewId, -1);
         this.showNotification('Like removed', 'info');
       } else {
-        await this.updateHelpfulCount(reviewId, 1);
+        // Like
+        if (this.userId) {
+          await this.addLikeToDatabase(reviewId);
+        } else {
+          this.addGuestLike(reviewId);
+        }
         this.addLocalLike(reviewId);
         this.updateButtonUI(buttonElement, true);
         this.updateLikeCountDisplay(reviewId, 1);
@@ -62,19 +169,95 @@ class ReviewLikeSystem {
     }
   }
   
-  async updateHelpfulCount(reviewId, delta) {
-    if (!window.pb) return;
+  addGuestLike(reviewId) {
+    if (!this.likedReviews.includes(reviewId)) {
+      this.likedReviews.push(reviewId);
+      this.saveGuestLikes();
+    }
+  }
+  
+  removeGuestLike(reviewId) {
+    const index = this.likedReviews.indexOf(reviewId);
+    if (index > -1) {
+      this.likedReviews.splice(index, 1);
+      this.saveGuestLikes();
+    }
+  }
+  
+  addLocalLike(reviewId) {
+    if (!this.likedReviews.includes(reviewId)) {
+      this.likedReviews.push(reviewId);
+    }
+  }
+  
+  removeLocalLike(reviewId) {
+    const index = this.likedReviews.indexOf(reviewId);
+    if (index > -1) {
+      this.likedReviews.splice(index, 1);
+    }
+  }
+  
+  async addLikeToDatabase(reviewId) {
+    if (!window.pb) throw new Error('PocketBase not available');
     
     try {
-      const review = await window.pb.collection("reviews").getOne(reviewId);
-      const currentHelpful = review.helpful || 0;
-      const newHelpful = Math.max(0, currentHelpful + delta);
-      
-      await window.pb.collection("reviews").update(reviewId, {
-        helpful: newHelpful
+      // Check if like already exists
+      const existingLikes = await window.pb.collection("user_review_likes").getFullList({
+        filter: `reviewId = "${reviewId}" && userId = "${this.userId}"`,
+        $autoCancel: false
       });
+      
+      if (existingLikes.length > 0) {
+        console.log('Like already exists');
+        return;
+      }
+      
+      // Create like record
+      await window.pb.collection("user_review_likes").create({
+        reviewId: reviewId,
+        userId: this.userId,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Update review's helpful count
+      const review = await window.pb.collection("reviews").getOne(reviewId);
+      await window.pb.collection("reviews").update(reviewId, {
+        helpful: (review.helpful || 0) + 1
+      });
+      
+      console.log(`Added like to database for review ${reviewId}`);
+      
     } catch (error) {
-      console.error('Error updating helpful count:', error);
+      console.error('Error adding like to database:', error);
+      throw error;
+    }
+  }
+  
+  async removeLikeFromDatabase(reviewId) {
+    if (!window.pb) throw new Error('PocketBase not available');
+    
+    try {
+      // Find the like record
+      const likes = await window.pb.collection("user_review_likes").getFullList({
+        filter: `reviewId = "${reviewId}" && userId = "${this.userId}"`,
+        $autoCancel: false
+      });
+      
+      // Delete each like record
+      for (const like of likes) {
+        await window.pb.collection("user_review_likes").delete(like.id);
+      }
+      
+      // Update review's helpful count
+      const review = await window.pb.collection("reviews").getOne(reviewId);
+      await window.pb.collection("reviews").update(reviewId, {
+        helpful: Math.max(0, (review.helpful || 0) - 1)
+      });
+      
+      console.log(`Removed like from database for review ${reviewId}`);
+      
+    } catch (error) {
+      console.error('Error removing like from database:', error);
       throw error;
     }
   }
@@ -85,26 +268,6 @@ class ReviewLikeSystem {
       const currentCount = parseInt(likeCountSpan.textContent) || 0;
       likeCountSpan.textContent = Math.max(0, currentCount + delta);
     }
-  }
-  
-  addLocalLike(reviewId) {
-    if (!this.likedReviews.includes(reviewId)) {
-      this.likedReviews.push(reviewId);
-      this.saveLocalLikes();
-    }
-  }
-  
-  removeLocalLike(reviewId) {
-    const index = this.likedReviews.indexOf(reviewId);
-    if (index > -1) {
-      this.likedReviews.splice(index, 1);
-      this.saveLocalLikes();
-    }
-  }
-  
-  saveLocalLikes() {
-    const storageKey = `review_likes_${this.userId}`;
-    localStorage.setItem(storageKey, JSON.stringify(this.likedReviews));
   }
   
   isReviewLiked(reviewId) {
@@ -133,6 +296,17 @@ class ReviewLikeSystem {
       button.style.borderColor = '';
       button.style.color = '';
     }
+  }
+  
+  initializeButtons() {
+    document.querySelectorAll('.review-like-btn').forEach(btn => {
+      const reviewId = btn.dataset.reviewId;
+      if (reviewId && this.isReviewLiked(reviewId)) {
+        this.updateButtonUI(btn, true);
+      } else {
+        this.updateButtonUI(btn, false);
+      }
+    });
   }
   
   showNotification(message, type) {
@@ -167,20 +341,13 @@ class ReviewLikeSystem {
       setTimeout(() => notification.remove(), 300);
     }, 2000);
   }
-  
-  initializeButtons() {
-    document.querySelectorAll('.review-like-btn').forEach(btn => {
-      const reviewId = btn.dataset.reviewId;
-      if (reviewId && this.isReviewLiked(reviewId)) {
-        this.updateButtonUI(btn, true);
-      }
-    });
-  }
 }
 
 // Initialize the system
 let reviewLikeSystem;
 
+// Initialize after DOM is ready
+ 
 // ==================== MAIN PAGE LOAD ====================
 
 window.addEventListener("DOMContentLoaded", async () => {
