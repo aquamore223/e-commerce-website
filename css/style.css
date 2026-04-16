@@ -1801,6 +1801,23 @@ form p a {
     background-color: hsla(7, 80%, 57%, 0.87);
     
 }
+.clear-cart-btn {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.clear-cart-btn:hover {
+  background: #c93333;
+}
+
+
 #coup-contianer{
     height:50px;
     gap: 30px;

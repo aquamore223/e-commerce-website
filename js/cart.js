@@ -1,16 +1,140 @@
-// ==================== CART SYSTEM ====================
+// ==================== CART SYSTEM WITH POCKETBASE SYNC ====================
+
+function getCurrentUserId() {
+  if (window.authSystem?.currentUser?.id) {
+    return window.authSystem.currentUser.id;
+  }
+  if (window.pb?.authStore?.model?.id) {
+    return window.pb.authStore.model.id;
+  }
+  return null;
+}
 
 class CartSystem {
   constructor() {
     // Load cart from localStorage
     this.cart = JSON.parse(localStorage.getItem("cart")) || [];
+    this.userId = getCurrentUserId();
+    this.isLoading = false;
     
     // Initial update
     this.updateCartCount();
     this.renderCheckout();
     
-    // Set up event listeners ONCE
+    // Initialize auth and database sync
+    this.initAuth();
+    
+    // Set up event listeners
     this.setupEventListeners();
+  }
+  
+  async initAuth() {
+    await this.waitForAuth();
+    this.userId = getCurrentUserId();
+    
+    if (this.userId) {
+      console.log('🔐 Cart - User logged in, loading from PocketBase...');
+      await this.loadCartFromDB();
+    }
+    
+    this.setupAuthListener();
+  }
+  
+  waitForAuth() {
+    return new Promise((resolve) => {
+      if (window.authSystem) {
+        resolve();
+      } else {
+        const checkAuth = setInterval(() => {
+          if (window.authSystem) {
+            clearInterval(checkAuth);
+            resolve();
+          }
+        }, 100);
+        setTimeout(() => resolve(), 3000);
+      }
+    });
+  }
+  
+  setupAuthListener() {
+    document.addEventListener('authChanged', async () => {
+      const newUserId = getCurrentUserId();
+      
+      if (newUserId && !this.userId) {
+        this.userId = newUserId;
+        await this.loadCartFromDB();
+        this.updateCartCount();
+        this.renderCheckout();
+      } else if (!newUserId && this.userId) {
+        this.userId = null;
+        this.saveCart();
+        this.updateCartCount();
+        this.renderCheckout();
+      }
+    });
+  }
+  
+  async loadCartFromDB() {
+    if (!this.userId || !window.pb || this.isLoading) return;
+    
+    this.isLoading = true;
+    
+    try {
+      const result = await window.pb.collection("user_cart").getFullList({
+        filter: `userId = "${this.userId}"`,
+        $autoCancel: false
+      });
+
+      if (result && result.length > 0) {
+        const dbCart = result[0].items || [];
+        
+        if (this.cart.length > 0 && dbCart.length === 0) {
+          await this.syncCartToDB();
+        } else if (dbCart.length > 0) {
+          this.cart = dbCart;
+          this.saveCart();
+        }
+      } else if (this.cart.length > 0) {
+        await this.syncCartToDB();
+      }
+      
+      this.updateCartCount();
+      this.renderCheckout();
+      
+    } catch (err) {
+      console.error("Error loading cart:", err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  async syncCartToDB() {
+    if (!this.userId || !window.pb) return;
+    
+    try {
+      const result = await window.pb.collection("user_cart").getFullList({
+        filter: `userId = "${this.userId}"`,
+        $autoCancel: false
+      });
+
+      if (result && result.length > 0) {
+        await window.pb.collection("user_cart").update(result[0].id, {
+          userId: this.userId,
+          items: this.cart,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('✅ Cart updated in PocketBase');
+      } else {
+        await window.pb.collection("user_cart").create({
+          userId: this.userId,
+          items: this.cart,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('✅ Cart created in PocketBase');
+      }
+    } catch (err) {
+      console.error("Sync failed:", err);
+    }
   }
   
   setupEventListeners() {
@@ -29,7 +153,7 @@ class CartSystem {
       this.renderCheckout();
     });
     
-    // ADD TO CART BUTTONS - Instant feedback
+    // ADD TO CART BUTTONS
     document.addEventListener("click", async (e) => {
       const btn = e.target.closest(".add-to-cart-btn");
       if (!btn) return;
@@ -37,7 +161,6 @@ class CartSystem {
       const id = btn.dataset.id;
       if (!id) return;
       
-      // INSTANT VISUAL FEEDBACK
       const originalText = btn.innerHTML;
       btn.innerHTML = '<i class="fas fa-check"></i> Added!';
       btn.classList.add("added");
@@ -84,6 +207,27 @@ class CartSystem {
       const item = this.cart.find((p) => p.id == id);
       if (item) {
         item.qty = qty;
+        this.saveCart();
+        this.renderCheckout();
+      }
+    });
+    
+    // REMOVE ITEM
+    document.addEventListener("click", (e) => {
+      if (!e.target.classList.contains("remove-item")) return;
+      
+      const id = e.target.dataset.id;
+      const color = e.target.dataset.color;
+      const size = e.target.dataset.size;
+      
+      const index = this.cart.findIndex(p => 
+        p.id == id && 
+        (p.color || '') === (color || '') && 
+        (p.size || '') === (size || '')
+      );
+      
+      if (index !== -1) {
+        this.cart.splice(index, 1);
         this.saveCart();
         this.renderCheckout();
       }
@@ -221,6 +365,11 @@ class CartSystem {
   saveCart() {
     localStorage.setItem("cart", JSON.stringify(this.cart));
     this.updateCartCount();
+    
+    if (this.userId && window.pb) {
+      this.syncCartToDB();
+    }
+    
     document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
   }
   
@@ -315,33 +464,170 @@ class CartSystem {
       setTimeout(() => notification.remove(), 300);
     }, 2000);
   }
+  
+  async clearCart() {
+    console.log('🗑️ Clearing entire cart...');
+    
+    this.cart = [];
+    this.saveCart();
+    
+    if (this.userId && window.pb) {
+      await this.syncCartToDB();
+    }
+    
+    this.updateCartCount();
+    this.renderCheckout();
+    document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
+    this.showCartNotification('Cart cleared successfully!');
+    console.log('✅ Cart cleared, items:', this.cart.length);
+  }
 }
 
-/* ---------------- WISHLIST SYSTEM ---------------- */
+
+
+// ==================== WISHLIST SYSTEM WITH POCKETBASE SYNC ====================
+ 
+
 class WishlistSystem {
   constructor() {
     // Load wishlist from localStorage
     this.items = JSON.parse(localStorage.getItem("wishlist")) || [];
+    this.userId = getCurrentUserId();
     
     console.log("Wishlist loaded:", this.items.length, "items");
     
-    // Update count immediately (same as cart)
+    // Initial update
     this.updateWishlistCount();
     this.updateAllIcons();
+    
+    // Initialize auth and database sync
+    this.initAuth();
     
     // Set up event listeners
     this.setupEventListeners();
   }
   
+  async initAuth() {
+    await this.waitForAuth();
+    this.userId = getCurrentUserId();
+    
+    if (this.userId) {
+      console.log('🔐 Wishlist - User logged in, loading from PocketBase...');
+      await this.loadWishlistFromDB();
+    }
+    
+    this.setupAuthListener();
+  }
+  
+  waitForAuth() {
+    return new Promise((resolve) => {
+      if (window.authSystem) {
+        resolve();
+      } else {
+        const checkAuth = setInterval(() => {
+          if (window.authSystem) {
+            clearInterval(checkAuth);
+            resolve();
+          }
+        }, 100);
+        setTimeout(() => resolve(), 3000);
+      }
+    });
+  }
+  
+  setupAuthListener() {
+    document.addEventListener('authChanged', async () => {
+      const newUserId = getCurrentUserId();
+      
+      if (newUserId && !this.userId) {
+        this.userId = newUserId;
+        await this.loadWishlistFromDB();
+        this.updateWishlistCount();
+        this.updateAllIcons();
+      } else if (!newUserId && this.userId) {
+        this.userId = null;
+        this.saveWishlist();
+        this.updateWishlistCount();
+        this.updateAllIcons();
+      }
+    });
+  }
+  
+  async loadWishlistFromDB() {
+    if (!this.userId || !window.pb) return;
+    
+    try {
+      console.log('🔄 Loading wishlist from PocketBase for user:', this.userId);
+      
+      const result = await window.pb.collection("user_wishlist").getFullList({
+        filter: `userId = "${this.userId}"`,
+        $autoCancel: false
+      });
+
+      if (result && result.length > 0) {
+        const dbItems = result[0].productIds || [];
+        console.log('📦 Wishlist loaded from PocketBase:', dbItems.length, 'items');
+        
+        if (this.items.length > 0 && dbItems.length === 0) {
+          await this.syncWishlistToDB();
+        } else if (dbItems.length > 0) {
+          this.items = dbItems;
+          this.saveWishlist();
+        }
+      } else if (this.items.length > 0) {
+        await this.syncWishlistToDB();
+      }
+      
+      this.updateWishlistCount();
+      this.updateAllIcons();
+      
+    } catch (err) {
+      console.error("Error loading wishlist:", err);
+    }
+  }
+  
+  async syncWishlistToDB() {
+    if (!this.userId || !window.pb) return;
+    
+    try {
+      const result = await window.pb.collection("user_wishlist").getFullList({
+        filter: `userId = "${this.userId}"`,
+        $autoCancel: false
+      });
+
+      if (result && result.length > 0) {
+        await window.pb.collection("user_wishlist").update(result[0].id, {
+          userId: this.userId,
+          productIds: this.items,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('✅ Wishlist updated in PocketBase');
+      } else {
+        await window.pb.collection("user_wishlist").create({
+          userId: this.userId,
+          productIds: this.items,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('✅ Wishlist created in PocketBase');
+      }
+    } catch (err) {
+      console.error("Sync failed:", err);
+    }
+  }
+  
   setupEventListeners() {
-    // Listen for storage changes (when another tab updates wishlist)
     window.addEventListener('storage', (e) => {
       if (e.key === 'wishlist') {
         this.items = JSON.parse(e.newValue) || [];
         this.updateWishlistCount();
         this.updateAllIcons();
-        console.log("Wishlist updated from another tab:", this.items.length);
       }
+    });
+    
+    // Listen for custom wishlist update events
+    document.addEventListener("wishlistUpdated", () => {
+      this.updateWishlistCount();
+      this.updateAllIcons();
     });
   }
   
@@ -355,13 +641,12 @@ class WishlistSystem {
     
     if (index > -1) {
       this.items.splice(index, 1);
-      console.log("Removed from wishlist:", productId);
+      console.log("❌ Removed from wishlist:", productId);
     } else {
       this.items.push(product);
-      console.log("Added to wishlist:", productId);
+      console.log("❤️ Added to wishlist:", productId);
     }
     
-    // Save and update (same as cart)
     this.saveWishlist();
     this.updateAllIcons();
     this.updateWishlistCount();
@@ -376,8 +661,12 @@ class WishlistSystem {
       if (icon) {
         if (this.isWishlisted(productId)) {
           icon.classList.add("filled");
+          icon.style.fill = "#ff4444";
+          icon.style.color = "#ff4444";
         } else {
           icon.classList.remove("filled");
+          icon.style.fill = "";
+          icon.style.color = "";
         }
       }
     });
@@ -417,31 +706,22 @@ class WishlistSystem {
       }
     }
     
-    const productCard = document.querySelector(`[data-product-id="${productId}"]`);
-    if (productCard) {
-      return {
-        id: productId,
-        name: productCard.querySelector("h5")?.textContent || "Product",
-        price: parseFloat(productCard.querySelector(".price")?.textContent?.replace("$", "") || "0"),
-        img: productCard.querySelector("img")?.src || "/images/placeholder.jpg",
-      };
-    }
-    
     return null;
   }
   
   saveWishlist() {
     localStorage.setItem("wishlist", JSON.stringify(this.items));
     this.updateWishlistCount();
+    
+    if (this.userId && window.pb) {
+      this.syncWishlistToDB();
+    }
+    
     document.dispatchEvent(new CustomEvent("wishlistUpdated", { detail: this.items }));
   }
   
-  // NEW: Same pattern as cart count
   updateWishlistCount() {
-    // Try to find the wishlist count element
     let count = document.querySelector(".wish-count");
-    
-    // If not found, try alternative selectors
     if (!count) {
       count = document.querySelector(".wishlist-count");
     }
@@ -449,24 +729,23 @@ class WishlistSystem {
       count = document.querySelector("[data-wishlist-count]");
     }
     
-    if (!count) {
-      console.log("⚠️ Wishlist count element (.wish-count) not found in DOM");
-      return;
-    }
+    if (!count) return;
     
     const total = this.items.length;
     
     if (total > 0) {
       count.style.display = "flex";
       count.textContent = total > 99 ? "99+" : total;
-       
     } else {
       count.style.display = "none";
-      console.log("✅ Wishlist is empty, count hidden");
     }
   }
   
-  // NEW: Same as cart force refresh
+  // Alias for compatibility
+  updateCount() {
+    this.updateWishlistCount();
+  }
+  
   forceRefreshWishlistCount() {
     this.items = JSON.parse(localStorage.getItem("wishlist")) || [];
     this.updateWishlistCount();
@@ -480,9 +759,31 @@ class WishlistSystem {
   getCount() {
     return this.items.length;
   }
+  
+  getItems() {
+    return this.items;
+  }
+  
+  async clearWishlist() {
+    console.log('🗑️ Clearing entire wishlist...');
+    
+    this.items = [];
+    this.saveWishlist();
+    
+    if (this.userId && window.pb) {
+      await this.syncWishlistToDB();
+    }
+    
+    this.updateWishlistCount();
+    this.updateAllIcons();
+    document.dispatchEvent(new CustomEvent("wishlistUpdated", { detail: this.items }));
+    console.log('✅ Wishlist cleared, items:', this.items.length);
+  }
 }
 
-/* ---------------- VIEWED SYSTEM ---------------- */
+
+// ==================== VIEWED SYSTEM ====================
+
 class ViewedSystem {
   constructor() {
     this.items = JSON.parse(localStorage.getItem("viewed")) || [];
@@ -524,15 +825,17 @@ class ViewedSystem {
   }
 }
 
-/* ---------------- INITIALIZE ---------------- */
-// Initialize all systems
+
+// ==================== INITIALIZE ====================
+
 window.cartSystem = new CartSystem();
 window.wishlistSystem = new WishlistSystem();
 window.viewedSystem = new ViewedSystem();
 
-/* ---------------- FORCE REFRESH ON PAGE LOAD (SAME AS CART) ---------------- */
+
+// ==================== FORCE REFRESH ON PAGE LOAD ====================
+
 (function ensureCountsOnAllPages() {
-  // This function runs immediately and on every page load
   const refreshAllCounts = () => {
     if (window.cartSystem) {
       window.cartSystem.forceRefreshCartCount();
@@ -542,33 +845,32 @@ window.viewedSystem = new ViewedSystem();
     }
   };
   
-  // Run immediately
   refreshAllCounts();
   
-  // Also run when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', refreshAllCounts);
   }
   
-  // Also run when page becomes visible
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       refreshAllCounts();
     }
   });
   
-  // For back/forward navigation
   window.addEventListener('pageshow', () => {
     refreshAllCounts();
   });
 })();
 
-/* ---------------- GLOBAL CLICK EVENTS ---------------- */
+
+// ==================== GLOBAL CLICK EVENTS ====================
+
 document.addEventListener("click", (e) => {
   // Wishlist heart click
   const heart = e.target.closest(".heart-icon, .prod-like");
   if (heart) {
     e.preventDefault();
+    e.stopPropagation();
     const productId = heart.dataset.id;
     if (!productId) return;
     
@@ -577,8 +879,12 @@ document.addEventListener("click", (e) => {
       const willBeWishlisted = !window.wishlistSystem?.isWishlisted(productId);
       if (willBeWishlisted) {
         icon.classList.add("filled");
+        icon.style.fill = "#ff4444";
+        icon.style.color = "#ff4444";
       } else {
         icon.classList.remove("filled");
+        icon.style.fill = "";
+        icon.style.color = "";
       }
     }
     
@@ -590,6 +896,7 @@ document.addEventListener("click", (e) => {
   const eye = e.target.closest(".eye-icon");
   if (eye) {
     e.preventDefault();
+    e.stopPropagation();
     const productId = eye.dataset.id;
     if (!productId) return;
     
@@ -603,7 +910,9 @@ document.addEventListener("click", (e) => {
   }
 });
 
-/* ---------------- MUTATION OBSERVER ---------------- */
+
+// ==================== MUTATION OBSERVER ====================
+
 let observerTimeout = null;
 
 const observer = new MutationObserver(() => {
@@ -625,7 +934,9 @@ const observer = new MutationObserver(() => {
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* ---------------- EVENT LISTENERS ---------------- */
+
+// ==================== EVENT LISTENERS ====================
+
 document.addEventListener("cartUpdated", () => {
   window.cartSystem?.updateCartCount();
 });
@@ -639,7 +950,9 @@ document.addEventListener("viewedUpdated", () => {
   window.viewedSystem?.updateAllEyeIcons();
 });
 
-/* ---------------- CHECKOUT AUTHENTICATION CHECK ---------------- */
+
+// ==================== CHECKOUT AUTHENTICATION CHECK ====================
+
 function checkAuthBeforeCheckout() {
   if (window.authSystem && window.authSystem.isLoggedIn()) {
     window.location.href = "/order&payment/checkout.html";
@@ -675,4 +988,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.checkAuthBeforeCheckout = checkAuthBeforeCheckout;
 
- 
+console.log("✅ Cart.js loaded - Cart and Wishlist with PocketBase sync!");

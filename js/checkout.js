@@ -1,14 +1,23 @@
-// checkout.js - Only handles UI rendering and triggers payment
+// checkout.js - Works with global cart system
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
 
     const checkoutContainer = document.querySelector(".check-out-prev");
-
     if (!checkoutContainer) return;
 
-    // Get cart from localStorage
-    const cart = JSON.parse(localStorage.getItem("cart")) || [];
-    console.log('🛒 Cart loaded:', cart.length, 'items');
+    // Wait for cart system to be ready
+    await waitForCartSystem();
+    
+    // Get cart from cartSystem or localStorage as fallback
+    let cart = [];
+    
+    if (window.cartSystem && window.cartSystem.cart) {
+        cart = window.cartSystem.cart;
+        console.log('🛒 Cart loaded from cartSystem:', cart.length, 'items');
+    } else {
+        cart = JSON.parse(localStorage.getItem("cart")) || [];
+        console.log('🛒 Cart loaded from localStorage:', cart.length, 'items');
+    }
 
     // Payment method logos
     const paymentLogos = {
@@ -19,6 +28,23 @@ window.addEventListener("DOMContentLoaded", () => {
         googlepay: "/images/payments/google.png",
         bank_transfer: "/images/bank-transfer.png"
     };
+
+    // Helper function to wait for cart system
+    function waitForCartSystem() {
+        return new Promise((resolve) => {
+            if (window.cartSystem && window.cartSystem.isInitialized) {
+                resolve();
+            } else {
+                const checkInterval = setInterval(() => {
+                    if (window.cartSystem && window.cartSystem.isInitialized) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+                setTimeout(() => resolve(), 3000);
+            }
+        });
+    }
 
     // Helper function to format item details
     function getItemDetails(item) {
@@ -36,6 +62,14 @@ window.addEventListener("DOMContentLoaded", () => {
         if (details.length === 1) return `(${details[0]})`;
         return `(${details.join(', ')})`;
     }
+
+    // Helper function to format price
+    function formatPrice(price) {
+        return `$${Number(price || 0).toFixed(2)}`;
+    }
+
+    // Make formatPrice available globally
+    window.formatPrice = formatPrice;
 
     // Render checkout page
     function renderCheckout() {
@@ -60,7 +94,7 @@ window.addEventListener("DOMContentLoaded", () => {
                                     <span class="qty-display">Qty: ${item.qty}</span>
                                 </div>
                             </div>
-                            <p class="item-subtotal">$${subtotal.toFixed(2)}</p>
+                            <p class="item-subtotal">${formatPrice(subtotal)}</p>
                         </div>
                     `;
                 }).join("")}
@@ -77,7 +111,7 @@ window.addEventListener("DOMContentLoaded", () => {
             <div class="cart-summary">
                 <div class="undl-fl">
                     <p>Subtotal:</p>
-                    <p>$${subtotal.toFixed(2)}</p>
+                    <p>${formatPrice(subtotal)}</p>
                 </div>
                 <div class="undl-fl">
                     <p>Shipping:</p>
@@ -85,7 +119,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div class="pg-flex-sb">
                     <p>Total:</p>
-                    <p>$${total.toFixed(2)}</p>
+                    <p>${formatPrice(total)}</p>
                 </div>
                 
                 <div class="payment-methods">
@@ -237,15 +271,17 @@ function showOrderConfirmationModal(orderDetails) {
                     </div>
                     
                     <!-- Payment Info -->
-                    <div style="background: ${orderDetails.paymentMethod === 'cash_on_delivery' ? '#fff3cd' : '#d4edda'}; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px; color: ${orderDetails.paymentMethod === 'cash_on_delivery' ? '#856404' : '#155724'};">Payment Information</h4>
-                        <div><strong>Method:</strong> ${orderDetails.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : orderDetails.paymentMethod}</div>
+                    <div style="background: ${orderDetails.paymentMethod === 'cash' ? '#fff3cd' : '#d4edda'}; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px; color: ${orderDetails.paymentMethod === 'cash' ? '#856404' : '#155724'};">Payment Information</h4>
+                        <div><strong>Method:</strong> ${orderDetails.paymentMethod === 'cash' ? 'Cash on Delivery' : 
+                                    orderDetails.paymentMethod === 'bank' ? 'Bank Transfer' : 
+                                    orderDetails.paymentMethod}</div>
                         <div><strong>Status:</strong> 
-                            <span style="color: ${orderDetails.paymentMethod === 'cash_on_delivery' ? '#ff9800' : '#28a745'}">
-                                ${orderDetails.paymentMethod === 'cash_on_delivery' ? 'Pending' : 'Paid'}
+                            <span style="color: ${orderDetails.paymentMethod === 'cash' ? '#ff9800' : '#28a745'}">
+                                ${orderDetails.paymentMethod === 'cash' ? 'Pending' : 'Paid'}
                             </span>
                         </div>
-                        ${orderDetails.paymentMethod === 'cash_on_delivery' ? 
+                        ${orderDetails.paymentMethod === 'cash' ? 
                             '<small style="color: #856404;">Please keep exact change ready for delivery</small>' : 
                             '<small style="color: #155724;">Payment completed successfully</small>'}
                     </div>
@@ -288,6 +324,10 @@ function showOrderConfirmationModal(orderDetails) {
                 from { opacity: 0; }
                 to { opacity: 1; }
             }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
             @keyframes slideIn {
                 from { transform: translateY(-50px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
@@ -326,8 +366,16 @@ document.addEventListener('click', async (e) => {
     if (e.target.id === 'place-order-btn') {
         console.log('🔴 Place order button clicked!');
         
-        // Get fresh cart data
-        const cart = JSON.parse(localStorage.getItem("cart")) || [];
+        // Get fresh cart data from cartSystem or localStorage
+        let cart = [];
+        
+        if (window.cartSystem && window.cartSystem.cart) {
+            cart = window.cartSystem.cart;
+            console.log('Cart from cartSystem:', cart.length, 'items');
+        } else {
+            cart = JSON.parse(localStorage.getItem("cart")) || [];
+            console.log('Cart from localStorage:', cart.length, 'items');
+        }
         
         if (cart.length === 0) {
             alert('Your cart is empty!');
@@ -370,7 +418,7 @@ document.addEventListener('click', async (e) => {
             
             // Prepare order data
             const orderData = {
-                userId: null,
+                userId: window.cartSystem?.userId || null,
                 items: cart.map(item => ({
                     id: item.id,
                     name: item.name,
@@ -399,7 +447,12 @@ document.addEventListener('click', async (e) => {
             const result = await window.paymentProcessor.processPayment(orderData, selectedPayment.value);
             
             if (result.success) {
-                localStorage.removeItem('cart');
+                // Clear cart after successful order
+                if (window.cartSystem) {
+                    await window.cartSystem.clearCart();
+                } else {
+                    localStorage.removeItem('cart');
+                }
                 
                 // Prepare order details for modal
                 const orderDetails = {
@@ -412,7 +465,7 @@ document.addEventListener('click', async (e) => {
                     bankDetails: result.bankDetails || null
                 };
                 
-                // Show confirmation modal instead of alert
+                // Show confirmation modal
                 showOrderConfirmationModal(orderDetails);
                 
                 // Reset button
