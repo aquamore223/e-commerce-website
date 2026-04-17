@@ -584,17 +584,6 @@ class WishlistSystem {
     } catch (err) {
       console.error("Error loading wishlist:", err);
     }
-    const localItems = JSON.parse(localStorage.getItem("wishlist")) || [];
-
-    if (localItems.length === 0) {
-      console.log("🧹 Local wishlist empty → overriding DB");
-      this.items = [];
-      await this.syncWishlistToDB();
-    } 
-    else if (dbItems.length > 0) {
-      this.items = dbItems;
-      this.saveWishlist();
-    }
   }
   
   async syncWishlistToDB() {

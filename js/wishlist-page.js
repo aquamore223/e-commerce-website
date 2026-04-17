@@ -283,23 +283,23 @@ function setupEventListeners() {
 
 function deleteFromWishlist(productId) {
     if (!productId) return;
-    
-    let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-    wishlist = wishlist.filter(item => item.id != productId);
-    localStorage.setItem('wishlist', JSON.stringify(wishlist));
-    
+
+    if (!window.wishlistSystem) return;
+
+    // Remove using system (THIS is the fix)
+    window.wishlistSystem.items = window.wishlistSystem.items.filter(
+        item => item.id != productId
+    );
+
+    // Save properly (this syncs to DB + localStorage)
+    window.wishlistSystem.saveWishlist();
+
     showNotification('Item removed from wishlist');
+
     currentPage = 1;
     loadWishlistItems();
     updateWishlistCount();
     loadJustForYou();
-    
-    document.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: wishlist }));
-    
-    if (window.wishlistSystem) {
-        window.wishlistSystem.items = wishlist;
-        window.wishlistSystem.updateCount();
-    }
 }
 
 async function addToCartFromWishlist(productId, btnElement) {
@@ -355,7 +355,10 @@ async function moveAllToCart(e) {
         await window.cartSystem.addToCart(item.id);
     }
     
-    localStorage.setItem('wishlist', JSON.stringify([]));
+    if (window.wishlistSystem) {
+    window.wishlistSystem.items = [];
+    window.wishlistSystem.saveWishlist();
+    }
     showNotification(`Added ${wishlist.length} items to cart`);
     currentPage = 1;
     await loadWishlistItems();
