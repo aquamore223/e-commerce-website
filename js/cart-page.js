@@ -125,54 +125,81 @@ class CartPage {
       clearCartBtn = newClearBtn;
       
       clearCartBtn.addEventListener('click', async (e) => {
+
         e.preventDefault();
         e.stopPropagation();
-        
-        console.log('Clear cart button clicked');
-        
-        const confirmed = confirm('⚠️ Are you sure you want to clear your entire cart? This action cannot be undone.');
-        
-        if (confirmed && window.cartSystem) {
+
+        const modal = this.createClearCartModal();
+
+        const cancelBtn = modal.querySelector(".cancel-clear-cart");
+        const confirmBtn = modal.querySelector(".confirm-clear-cart");
+
+        // CLOSE MODAL
+        const closeModal = () => {
+          modal.classList.add("hide");
+
+          setTimeout(() => {
+            modal.remove();
+          }, 300);
+        };
+
+        cancelBtn.addEventListener("click", closeModal);
+
+        modal.querySelector(".clear-cart-overlay")
+          .addEventListener("click", closeModal);
+
+        // CONFIRM CLEAR
+        confirmBtn.addEventListener("click", async () => {
+
+          if (!window.cartSystem) return;
+
           this.isUpdating = true;
-          
-          // Show loading state
-          const originalText = clearCartBtn.textContent;
-          clearCartBtn.textContent = 'Clearing...';
-          clearCartBtn.disabled = true;
-          
+
+          const originalText = confirmBtn.textContent;
+
+          confirmBtn.textContent = "Clearing...";
+          confirmBtn.disabled = true;
+
           try {
-            // Clear the cart
+
             await window.cartSystem.clearCart();
-            console.log('Cart cleared, updating UI...');
-            
-            // Force immediate UI update
+
             this.forceRender();
-            
-            // Also force update the cart count in header
+
             if (window.cartSystem.updateCartCount) {
               window.cartSystem.updateCartCount();
             }
-            
-            // Manually update the cart count badge
+
             const cartCount = document.querySelector(".cart-count");
+
             if (cartCount) {
               cartCount.style.display = "none";
               cartCount.textContent = "0";
             }
-            
+
             this.showNotification('Cart cleared successfully!');
+
+            closeModal();
+
           } catch (error) {
+
             console.error('Error clearing cart:', error);
-            this.showNotification('Failed to clear cart. Please try again.', 'error');
+
+            this.showNotification(
+              'Failed to clear cart. Please try again.',
+              'error'
+            );
+
           } finally {
+
             this.isUpdating = false;
-            clearCartBtn.textContent = originalText;
-            clearCartBtn.disabled = false;
+
+            confirmBtn.textContent = originalText;
+            confirmBtn.disabled = false;
           }
-        }
+        });
       });
       
-      console.log('Clear cart button setup complete');
     }
   }
   
@@ -293,6 +320,34 @@ class CartPage {
       });
     }
   }
+
+  createClearCartModal() {
+
+  // Remove existing modal if any
+  const existingModal = document.querySelector(".clear-cart-modal");
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement("div");
+  modal.className = "clear-cart-modal";
+
+  modal.innerHTML = `
+    <div class="clear-cart-overlay"></div>
+
+    <div class="clear-cart-content">
+      <h3>Clear Cart</h3>
+      <p>Are you sure you want to clear your entire cart?</p>
+
+      <div class="clear-cart-actions">
+        <button class="cancel-clear-cart">Cancel</button>
+        <button class="confirm-clear-cart">Clear Cart</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  return modal;
+}
 }
 
 // Initialize cart page when DOM is ready

@@ -1852,6 +1852,109 @@ form p a {
     margin-top: 40px;
 }
 
+.clear-cart-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  animation: fadeIn .3s ease;
+}
+
+.clear-cart-overlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(3px);
+}
+
+.clear-cart-content{
+  position: relative;
+  z-index: 2;
+
+  width: 90%;
+  max-width: 420px;
+
+  background: #fff;
+  border-radius: 16px;
+
+  padding: 30px;
+
+  animation: modalPop .3s ease;
+}
+
+.clear-cart-content h3{
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.clear-cart-content p{
+  color: #666;
+  line-height: 1.5;
+}
+
+.clear-cart-actions{
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+
+  margin-top: 25px;
+}
+
+.clear-cart-actions button{
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+
+  font-weight: 600;
+}
+
+.cancel-clear-cart{
+  background: #f1f1f1;
+}
+
+.confirm-clear-cart{
+  background: #db4444;
+  color: #fff;
+}
+
+.clear-cart-modal.hide{
+  animation: fadeOut .3s ease forwards;
+}
+
+@keyframes fadeIn{
+  from{
+    opacity:0;
+  }
+  to{
+    opacity:1;
+  }
+}
+
+@keyframes fadeOut{
+  from{
+    opacity:1;
+  }
+  to{
+    opacity:0;
+  }
+}
+
+@keyframes modalPop{
+  from{
+    opacity:0;
+    transform: scale(.8);
+  }
+  to{
+    opacity:1;
+    transform: scale(1);
+  }
+}
+
 
 
     @media (max-width: 720px) {

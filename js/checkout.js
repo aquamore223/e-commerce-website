@@ -665,6 +665,8 @@ document.addEventListener('click', async (e) => {
             
             console.log('Processing order:', orderData);
             
+            // Save billing details if checkbox checked
+                await saveBillingDetails();
             // Process payment
             const result = await window.paymentProcessor.processPayment(orderData, selectedPayment.value);
             
@@ -715,3 +717,54 @@ document.addEventListener('click', async (e) => {
         }
     }
 });
+
+
+// ==================== SAVE BILLING DETAILS ====================
+
+async function saveBillingDetails() {
+
+    try {
+
+        // Check if checkbox is checked
+        const shouldSave = document.getElementById('save-billing-details');
+
+        if (!shouldSave || !shouldSave.checked) {
+            return;
+        }
+
+        // Make sure user is logged in
+        if (!window.pb?.authStore?.isValid) {
+            console.log('User not logged in');
+            return;
+        }
+
+        // Get current user ID
+        const userId = window.pb.authStore.model.id;
+
+        // Collect billing details
+        const billingDetails = {
+            firstName: document.getElementById('billing-firstname')?.value || '',
+            companyName: document.getElementById('billing-company')?.value || '',
+            streetAddress: document.getElementById('billing-street')?.value || '',
+            apartment: document.getElementById('billing-apartment')?.value || '',
+            city: document.getElementById('billing-city')?.value || '',
+            phoneNumber: document.getElementById('billing-phone')?.value || '',
+            emailAddress: document.getElementById('billing-email')?.value || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        console.log('Saving billing details:', billingDetails);
+
+        // Update PocketBase user
+        await window.pb.collection('exclusive_users_collection').update(userId, {
+            billingdetails: billingDetails
+        });
+
+        console.log('✅ Billing details saved successfully');
+
+    } catch (error) {
+
+        console.error('❌ Failed to save billing details:', error);
+
+    }
+}
