@@ -757,7 +757,7 @@ async function saveBillingDetails() {
 
         // Update PocketBase user
         await window.pb.collection('exclusive_users_collection').update(userId, {
-            billingdetails: billingDetails
+            billingDetails: billingDetails
         });
 
         console.log('✅ Billing details saved successfully');
