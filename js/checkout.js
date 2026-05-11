@@ -195,6 +195,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     renderCheckout();
+    await loadBillingDetails();
 });
 
 // ==================== ORDER CONFIRMATION MODAL ====================
@@ -766,5 +767,39 @@ async function saveBillingDetails() {
 
         console.error('❌ Failed to save billing details:', error);
 
+    }
+}
+
+async function loadBillingDetails() {
+    try {
+        if (!window.pb?.authStore?.isValid) return;
+
+        const userId = window.pb.authStore.model.id;
+
+        const user = await window.pb
+            .collection('exclusive_users_collection')
+            .getOne(userId);
+
+        const data = user.billingDetails;
+
+        if (!data) return;
+
+        console.log("📦 Loaded billing details:", data);
+
+        // Auto-fill inputs
+        document.getElementById('billing-firstname').value = data.firstName || '';
+        document.getElementById('billing-company').value = data.companyName || '';
+        document.getElementById('billing-street').value = data.streetAddress || '';
+        document.getElementById('billing-apartment').value = data.apartment || '';
+        document.getElementById('billing-city').value = data.city || '';
+        document.getElementById('billing-phone').value = data.phoneNumber || '';
+        document.getElementById('billing-email').value = data.emailAddress || '';
+
+        // Optional: auto-check checkbox
+        const saveCheckbox = document.getElementById('save-billing-details');
+        if (saveCheckbox) saveCheckbox.checked = true;
+
+    } catch (error) {
+        console.error("❌ Failed to load billing details:", error);
     }
 }
