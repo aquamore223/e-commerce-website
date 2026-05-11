@@ -563,6 +563,8 @@ class CartSystem {
     // Dispatch event
     document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
     this.showCartNotification('Cart cleared successfully!');
+    
+     
   }
 }
 

@@ -888,6 +888,12 @@ window.viewOrderDetails = async function(orderId) {
         alert('Error loading order details');
     }
 };
+window.closeModal = function () {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.remove();
+    }
+};
 
 // Show order details modal
 function showOrderDetailsModal(order) {
@@ -905,7 +911,7 @@ function showOrderDetailsModal(order) {
             <div class="order-modal-content">
                 <div class="order-modal-header">
                     <h2>Order #${order.id.slice(-8).toUpperCase()}</h2>
-                    <button class="order-modal-close" onclick="closeModal()">&times;</button>
+                    <button class="order-modal-close" onclick="this.closest('.order-modal').remove()">&times;</button>
                 </div>
                 <div class="order-modal-body">
                     <div class="order-section">
