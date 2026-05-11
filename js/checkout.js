@@ -224,8 +224,25 @@ function showOrderConfirmationModal(orderDetails) {
                 <!-- Header -->
                 <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 25px; text-align: center; border-radius: 16px 16px 0 0;">
                     <i class="fas fa-check-circle" style="font-size: 60px; margin-bottom: 10px;"></i>
-                    <h2 style="margin: 0; font-size: 24px;">Order Confirmed!</h2>
-                    <p style="margin: 5px 0 0; opacity: 0.9;">Thank you for your purchase</p>
+                    <h2 style="margin: 0; font-size: 24px;">
+                            ${
+                                orderDetails.paymentMethod === 'cash'
+                                    ? 'Order Placed!'
+                                    : orderDetails.paymentMethod === 'bank'
+                                    ? 'Transfer Submitted!'
+                                    : 'Payment Successful!'
+                            }
+                        </h2>
+
+                        <p style="margin: 5px 0 0; opacity: 0.9;">
+                            ${
+                                orderDetails.paymentMethod === 'cash'
+                                    ? 'Pay when your order arrives'
+                                    : orderDetails.paymentMethod === 'bank'
+                                    ? 'We will verify your transfer shortly'
+                                    : 'Thank you for your purchase'
+                            }
+                        </p>
                 </div>
                 
                 <!-- Body -->
@@ -276,14 +293,44 @@ function showOrderConfirmationModal(orderDetails) {
                         <div><strong>Method:</strong> ${orderDetails.paymentMethod === 'cash' ? 'Cash on Delivery' : 
                                     orderDetails.paymentMethod === 'bank' ? 'Bank Transfer' : 
                                     orderDetails.paymentMethod}</div>
-                        <div><strong>Status:</strong> 
-                            <span style="color: ${orderDetails.paymentMethod === 'cash' ? '#ff9800' : '#28a745'}">
-                                ${orderDetails.paymentMethod === 'cash' ? 'Pending' : 'Paid'}
+                        <div>
+                            <strong>Status:</strong> 
+                            <span style="
+                                color: ${
+                                    orderDetails.paymentMethod === 'cash'
+                                        ? '#ff9800'
+                                        : orderDetails.paymentMethod === 'bank'
+                                        ? '#ff9800'
+                                        : '#28a745'
+                                };
+                            ">
+                                ${
+                                    orderDetails.paymentMethod === 'cash'
+                                        ? 'Pay on Delivery'
+                                        : orderDetails.paymentMethod === 'bank'
+                                        ? 'Awaiting Transfer Confirmation'
+                                        : 'Paid Successfully'
+                                }
                             </span>
                         </div>
-                        ${orderDetails.paymentMethod === 'cash' ? 
-                            '<small style="color: #856404;">Please keep exact change ready for delivery</small>' : 
-                            '<small style="color: #155724;">Payment completed successfully</small>'}
+
+                        <small style="
+                            color: ${
+                                orderDetails.paymentMethod === 'cash'
+                                    ? '#856404'
+                                    : orderDetails.paymentMethod === 'bank'
+                                    ? '#856404'
+                                    : '#155724'
+                            };
+                        ">
+                            ${
+                                orderDetails.paymentMethod === 'cash'
+                                    ? 'Customer will pay when order arrives'
+                                    : orderDetails.paymentMethod === 'bank'
+                                    ? 'Waiting for customer transfer confirmation'
+                                    : 'Payment completed successfully'
+                            }
+                        </small>
                     </div>
                     
                     <!-- Bank Transfer Details (if applicable) -->
@@ -359,6 +406,181 @@ function escapeHtml(str) {
     });
 }
 
+
+// ==================== BANK TRANSFER MODAL ====================
+
+function showBankTransferModal(orderDetails) {
+
+    const existingModal = document.getElementById('bank-transfer-modal');
+    if (existingModal) existingModal.remove();
+
+    const modalHtml = `
+        <div id="bank-transfer-modal"
+            style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.6);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+            ">
+
+            <div style="
+                background: #fff;
+                width: 90%;
+                max-width: 500px;
+                border-radius: 16px;
+                overflow: hidden;
+                animation: slideIn 0.3s ease;
+            ">
+
+                <!-- Header -->
+                <div style="
+                    background: linear-gradient(135deg,#0066cc,#0099ff);
+                    color: white;
+                    padding: 25px;
+                    text-align: center;
+                ">
+                    <i class="fas fa-university"
+                        style="font-size: 55px; margin-bottom: 10px;"></i>
+
+                    <h2>Bank Transfer</h2>
+
+                    <p style="opacity: 0.9;">
+                        Complete payment using the details below
+                    </p>
+                </div>
+
+                <!-- Body -->
+                <div style="padding: 25px;">
+
+                    <div style="
+                        background: #f8f9fa;
+                        border-radius: 12px;
+                        padding: 20px;
+                        margin-bottom: 20px;
+                    ">
+
+                        <div style="margin-bottom: 12px;">
+                            <strong>Bank:</strong>
+                            <div>${orderDetails.bankDetails.bankName}</div>
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <strong>Account Name:</strong>
+                            <div>${orderDetails.bankDetails.accountName}</div>
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <strong>Account Number:</strong>
+                            <div style="
+                                font-size: 24px;
+                                font-weight: bold;
+                                letter-spacing: 2px;
+                                color: #0066cc;
+                            ">
+                                ${orderDetails.bankDetails.accountNumber}
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <strong>Amount:</strong>
+                            <div style="
+                                font-size: 22px;
+                                color: #28a745;
+                                font-weight: bold;
+                            ">
+                                ${window.formatPrice(orderDetails.total)}
+                            </div>
+                        </div>
+
+                        <div>
+                            <strong>Reference:</strong>
+                            <div>${orderDetails.bankDetails.reference}</div>
+                        </div>
+                    </div>
+
+                    <div style="
+                        background: #fff3cd;
+                        color: #856404;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-bottom: 20px;
+                        font-size: 14px;
+                    ">
+                        Please use your Order ID as payment reference.
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+
+                        <button
+                            onclick="closeBankTransferModal()"
+                            style="
+                                flex: 1;
+                                padding: 14px;
+                                border: none;
+                                border-radius: 10px;
+                                background: #6c757d;
+                                color: white;
+                                cursor: pointer;
+                            ">
+                            Cancel
+                        </button>
+
+                        <button
+                            onclick="confirmBankTransferPayment()"
+                            style="
+                                flex: 1;
+                                padding: 14px;
+                                border: none;
+                                border-radius: 10px;
+                                background: #28a745;
+                                color: white;
+                                cursor: pointer;
+                            ">
+                            I Have Made Payment
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Save temporarily
+    window.pendingBankOrder = orderDetails;
+}
+
+
+function closeBankTransferModal() {
+    const modal = document.getElementById('bank-transfer-modal');
+
+    if (modal) {
+        modal.remove();
+    }
+}
+
+window.closeBankTransferModal = closeBankTransferModal;
+
+function confirmBankTransferPayment() {
+
+    closeBankTransferModal();
+
+    if (window.pendingBankOrder) {
+
+        showOrderConfirmationModal({
+            ...window.pendingBankOrder,
+            paymentConfirmed: true
+        });
+
+        window.pendingBankOrder = null;
+    }
+}
+
+window.confirmBankTransferPayment = confirmBankTransferPayment;
 // ==================== HANDLE PLACE ORDER ====================
 
 // Handle place order button click
@@ -465,8 +687,15 @@ document.addEventListener('click', async (e) => {
                     bankDetails: result.bankDetails || null
                 };
                 
-                // Show confirmation modal
-                showOrderConfirmationModal(orderDetails);
+              // BANK TRANSFER FLOW
+                if (selectedPayment.value === 'bank') {
+
+                    showBankTransferModal(orderDetails);
+
+                } else {
+
+                    showOrderConfirmationModal(orderDetails);
+                }
                 
                 // Reset button
                 placeOrderBtn.textContent = originalText;

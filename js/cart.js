@@ -937,6 +937,7 @@ document.addEventListener("click", (e) => {
     }
     
     window.wishlistSystem?.toggle(productId);
+    
     return;
   }
   
