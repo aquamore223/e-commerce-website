@@ -16,6 +16,10 @@ class CartSystem {
     this.cart = JSON.parse(localStorage.getItem("cart")) || [];
     this.userId = getCurrentUserId();
     this.isLoading = false;
+    this.isSyncing = false;
+    this.syncQueue = Promise.resolve(); // Queue to handle sync operations in order
+    this.lastSyncVersion = 0; // Track sync version to prevent stale updates
+    this.currentSyncVersion = 0;
     
     // Initial update
     this.updateCartCount();
@@ -87,15 +91,11 @@ class CartSystem {
 
       if (result && result.length > 0) {
         const dbCart = result[0].items || [];
+        console.log('📦 Loaded from DB:', dbCart.length, 'items');
         
-        if (this.cart.length > 0 && dbCart.length === 0) {
-          await this.syncCartToDB();
-        } else if (dbCart.length > 0) {
-          this.cart = dbCart;
-          this.saveCart();
-        }
-      } else if (this.cart.length > 0) {
-        await this.syncCartToDB();
+        // Replace local cart with DB cart
+        this.cart = dbCart;
+        localStorage.setItem("cart", JSON.stringify(this.cart));
       }
       
       this.updateCartCount();
@@ -109,36 +109,64 @@ class CartSystem {
   }
   
   async syncCartToDB() {
-    if (!this.userId || !window.pb) return;
-    
-    try {
-      const result = await window.pb.collection("user_cart").getFullList({
-        filter: `userId = "${this.userId}"`,
-        $autoCancel: false
-      });
-
-      if (result && result.length > 0) {
-        await window.pb.collection("user_cart").update(result[0].id, {
-          userId: this.userId,
-          items: this.cart,
-          updatedAt: new Date().toISOString()
-        });
-        console.log('✅ Cart updated in PocketBase');
-      } else {
-        await window.pb.collection("user_cart").create({
-          userId: this.userId,
-          items: this.cart,
-          updatedAt: new Date().toISOString()
-        });
-        console.log('✅ Cart created in PocketBase');
-      }
-    } catch (err) {
-      console.error("Sync failed:", err);
+    if (!this.userId || !window.pb) {
+      console.log('⚠️ Cannot sync: no user or PB');
+      return;
     }
+    
+    // Increment version for this sync operation
+    this.currentSyncVersion++;
+    const myVersion = this.currentSyncVersion;
+    
+    console.log(`🔄 Sync started (version ${myVersion}), items:`, this.cart.length);
+    
+    // Wait for previous sync to complete
+    await this.syncQueue;
+    
+    // Create new queue promise
+    this.syncQueue = this.syncQueue.then(async () => {
+      // If a newer sync has happened, skip this one (stale update)
+      if (myVersion !== this.currentSyncVersion) {
+        console.log(`⏭️ Skipping stale sync (version ${myVersion}, current ${this.currentSyncVersion})`);
+        return;
+      }
+      
+      try {
+        const result = await window.pb.collection("user_cart").getFullList({
+          filter: `userId = "${this.userId}"`,
+          $autoCancel: false
+        });
+
+        // Double-check we're still the latest version
+        if (myVersion !== this.currentSyncVersion) {
+          console.log(`⏭️ Skipping stale sync after fetch (version ${myVersion})`);
+          return;
+        }
+
+        if (result && result.length > 0) {
+          await window.pb.collection("user_cart").update(result[0].id, {
+            userId: this.userId,
+            items: this.cart,
+            updatedAt: new Date().toISOString()
+          });
+          console.log(`✅ Cart updated in PocketBase (version ${myVersion}), items:`, this.cart.length);
+        } else {
+          await window.pb.collection("user_cart").create({
+            userId: this.userId,
+            items: this.cart,
+            updatedAt: new Date().toISOString()
+          });
+          console.log(`✅ Cart created in PocketBase (version ${myVersion}), items:`, this.cart.length);
+        }
+      } catch (err) {
+        console.error("Sync failed:", err);
+      }
+    });
+    
+    await this.syncQueue;
   }
   
   setupEventListeners() {
-    // Listen for cart changes from other tabs/pages
     window.addEventListener('storage', (e) => {
       if (e.key === 'cart') {
         this.cart = JSON.parse(e.newValue) || [];
@@ -147,7 +175,6 @@ class CartSystem {
       }
     });
     
-    // Listen for custom cart update events
     document.addEventListener("cartUpdated", () => {
       this.updateCartCount();
       this.renderCheckout();
@@ -195,7 +222,7 @@ class CartSystem {
     });
     
     // QUANTITY CHANGE
-    document.addEventListener("change", (e) => {
+    document.addEventListener("change", async (e) => {
       if (!e.target.classList.contains("qty-input")) return;
       
       const row = e.target.closest(".cart-flex");
@@ -207,13 +234,13 @@ class CartSystem {
       const item = this.cart.find((p) => p.id == id);
       if (item) {
         item.qty = qty;
-        this.saveCart();
+        await this.saveCart();
         this.renderCheckout();
       }
     });
     
     // REMOVE ITEM
-    document.addEventListener("click", (e) => {
+    document.addEventListener("click", async (e) => {
       if (!e.target.classList.contains("remove-item")) return;
       
       const id = e.target.dataset.id;
@@ -228,7 +255,8 @@ class CartSystem {
       
       if (index !== -1) {
         this.cart.splice(index, 1);
-        this.saveCart();
+        console.log('🗑️ Item removed, saving cart...');
+        await this.saveCart();
         this.renderCheckout();
       }
     });
@@ -274,7 +302,7 @@ class CartSystem {
       });
     }
     
-    this.saveCart();
+    await this.saveCart();
     this.renderCheckout();
   }
   
@@ -330,7 +358,7 @@ class CartSystem {
       });
     }
     
-    this.saveCart();
+    await this.saveCart();
     this.renderCheckout();
     
     let details = [];
@@ -362,12 +390,16 @@ class CartSystem {
     return '/images/placeholder.jpg';
   }
   
-  saveCart() {
+  async saveCart() {
+    console.log('💾 Saving cart, items:', this.cart.length);
+    
+    // Save to localStorage first (immediate UI feedback)
     localStorage.setItem("cart", JSON.stringify(this.cart));
     this.updateCartCount();
     
+    // Sync to PocketBase if logged in (with version tracking)
     if (this.userId && window.pb) {
-      this.syncCartToDB();
+      await this.syncCartToDB();
     }
     
     document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
@@ -390,7 +422,6 @@ class CartSystem {
   forceRefreshCartCount() {
     this.cart = JSON.parse(localStorage.getItem("cart")) || [];
     this.updateCartCount();
-    console.log("Cart count force refreshed:", this.cart.reduce((s, i) => s + i.qty, 0));
   }
   
   renderCheckout() {
@@ -468,17 +499,23 @@ class CartSystem {
   async clearCart() {
     console.log('🗑️ Clearing entire cart...');
     
+    // Increment version to invalidate any pending syncs
+    this.currentSyncVersion++;
+    
+    // Empty the cart array
     this.cart = [];
-    this.saveCart();
     
-    if (this.userId && window.pb) {
-      await this.syncCartToDB();
-    }
+    // Save to localStorage and sync to PocketBase
+    await this.saveCart();
     
+    // Update UI
     this.updateCartCount();
     this.renderCheckout();
+    
+    // Dispatch event
     document.dispatchEvent(new CustomEvent("cartUpdated", { detail: this.cart }));
     this.showCartNotification('Cart cleared successfully!');
+    
     console.log('✅ Cart cleared, items:', this.cart.length);
   }
 }
