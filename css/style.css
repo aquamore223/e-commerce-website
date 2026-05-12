@@ -1754,6 +1754,7 @@ form p a {
 .cart-flex img{
     width:50px;
 }
+  
 
 #cart-items{
      max-height: 600px;
@@ -2030,6 +2031,13 @@ form p a {
             padding: 10px;
             
         }
+         .cart-item{
+            display: flex;
+            gap: 10px;
+         }
+         #price-space{
+            padding-left:50px;
+         }
         .cart-flex input{
             margin: 0;
         }
@@ -2040,6 +2048,13 @@ form p a {
         .receipt-fmt{
          margin-top: 20px;
          width:100%;
+        }
+        #delivery-state{
+            min-width:30px;
+        }
+        #cart-bottom-div{
+            display: flex;
+            gap: 10px;
         }
         
     }
