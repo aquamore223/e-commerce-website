@@ -481,6 +481,11 @@ class CartSystem {
           localStorage.setItem("selected_delivery_state", state);
       }
       
+      // Return 0 if subtotal is 0 (empty cart)
+      if (subtotal <= 0) {
+          return 0;
+      }
+      
       // Free shipping for orders over $100,000
       if (subtotal >= 100000) {
           return 0;
@@ -492,12 +497,12 @@ class CartSystem {
           Ibadan: 30,
           Kano: 50,
           PortHarcourt: 45,
-          benin: 75,
+          Benin: 75,
       };
 
       // Ensure number is returned
-      return Number(shippingRates[state] || 3500);
-  }
+      return Number(shippingRates[state] || 35); // Default to 35 if state not found
+  } 
   
   async saveCart() {
     console.log('💾 Saving cart, items:', this.cart.length);
@@ -538,56 +543,81 @@ class CartSystem {
     if (!container) return;
     
     if (this.cart.length === 0) {
-      container.innerHTML = "<p>Your cart is empty</p>";
-      return;
+        container.innerHTML = `
+            <p>Your cart is empty</p>
+            <div class="undl-fl">
+                <p>Subtotal:</p>
+                <p>$0.00</p>
+            </div>
+            <div class="undl-fl">
+                <p>Shipping:</p>
+                <p>$0.00</p>
+            </div>
+            <div class="pg-flex-sb">
+                <p>Total:</p>
+                <p>$0.00</p>
+            </div>
+        `;
+        return;
     }
     
     let subtotal = 0;
     
-    container.innerHTML = this.cart.map((item) => {
-      const itemTotal = item.price * item.qty;
-      subtotal += itemTotal;
-      
-      let details = '';
-      if (item.color) details += `<span class="item-color">${item.color}</span>`;
-      if (item.size) details += `<span class="item-size">${item.size}</span>`;
-      if (details) details = `<span class="item-details"> (${details})</span>`;
-      
-      return `
-        <div class="cart-flex cart-item" data-id="${item.id}" data-color="${item.color || ''}" data-size="${item.size || ''}">
-          <div id="cart-pic-section">
-            <img src="${item.img}" width="50" onerror="this.src='/images/placeholder.jpg'">
-            <p>${item.name}${details} <span class="cart-qty">x${item.qty}</span></p>
-          </div>
-          <p>$${itemTotal.toFixed(2)}</p>
-        </div>
-      `;
+    const itemsHTML = this.cart.map((item) => {
+        const itemTotal = item.price * item.qty;
+        subtotal += itemTotal;
+        
+        let details = [];
+        if (item.color && item.color !== 'null' && item.color !== 'undefined' && item.color.trim() !== '') {
+            details.push(item.color);
+        }
+        if (item.size && item.size !== 'null' && item.size !== 'undefined' && item.size.trim() !== '') {
+            details.push(item.size);
+        }
+        const detailsText = details.length > 0 ? ` (${details.join(', ')})` : '';
+        
+        return `
+            <div class="cart-flex cart-item" data-id="${item.id}" data-color="${item.color || ''}" data-size="${item.size || ''}">
+                <div id="cart-pic-section">
+                    <img src="${item.img}" width="50" onerror="this.src='/images/placeholder.jpg'">
+                    <p>${item.name}${detailsText} <span class="cart-qty">x${item.qty}</span></p>
+                </div>
+                <p>$${itemTotal.toFixed(2)}</p>
+            </div>
+        `;
     }).join("");
     
     const shipping = Number(this.calculateShipping(subtotal));
     const total = subtotal + shipping;
+    const currentState = localStorage.getItem("selected_delivery_state") || "Lagos";
 
-    container.innerHTML += `
-      <div class="undl-fl">
-        <p>Subtotal:</p>
-        <p>$${subtotal.toFixed(2)}</p>
-      </div>
+    container.innerHTML = itemsHTML + `
+        <div class="undl-fl">
+            <p>Subtotal:</p>
+            <p>$${subtotal.toFixed(2)}</p>
+        </div>
 
-      <div class="undl-fl">
-        <p>Shipping:</p>
-        <p>
-          ${shipping === 0 
-            ? 'Free' 
-            : '$' + shipping.toFixed(2)}
-        </p>
-      </div>
+        <div class="undl-fl">
+            <p>Shipping (${currentState}):</p>
+            <p>
+                ${shipping === 0 
+                    ? '<span style="color: #28a745;">Free</span>' 
+                    : '$' + shipping.toFixed(2)}
+            </p>
+        </div>
+        
+        ${shipping > 0 ? `
+            <div style="font-size: 11px; color: #666; margin-top: -5px; margin-bottom: 5px; padding-left: 5px;">
+                Free shipping on orders over $100,000
+            </div>
+        ` : ''}
 
-      <div class="pg-flex-sb">
-        <p>Total:</p>
-        <p>$${total.toFixed(2)}</p>
-      </div>
+        <div class="pg-flex-sb">
+            <p>Total:</p>
+            <p>$${total.toFixed(2)}</p>
+        </div>
     `;
-  }
+}
   
   showCartNotification(message) {
     const notification = document.createElement('div');

@@ -33,39 +33,39 @@ class CartPage {
   }
   
   render() {
-    if (!this.container || this.isUpdating) return;
-    
-    // Force get fresh cart data
-    const cart = window.cartSystem?.cart || [];
-    console.log('🎨 Rendering cart page, items:', cart.length);
-    
-    // Set the saved state in the dropdown
-    const stateSelect = document.getElementById("delivery-state");
-    if (stateSelect) {
-        const savedState = localStorage.getItem("selected_delivery_state");
-        if (savedState && stateSelect.querySelector(`option[value="${savedState}"]`)) {
-            stateSelect.value = savedState;
-        }
-    }
-    
-    if (cart.length === 0) {
-      this.container.innerHTML = '<p class="empty-cart" style="text-align: center; padding: 40px;">Your cart is empty</p>';
-      if (this.checkoutBtn) {
-        this.checkoutBtn.disabled = true;
-        this.checkoutBtn.style.opacity = '0.5';
-        this.checkoutBtn.style.cursor = 'not-allowed';
-        this.updateCartPageTotals(0);
+      if (!this.container || this.isUpdating) return;
+      
+      // Force get fresh cart data
+      const cart = window.cartSystem?.cart || [];
+      console.log('🎨 Rendering cart page, items:', cart.length);
+      
+      // Set the saved state in the dropdown
+      const stateSelect = document.getElementById("delivery-state");
+      if (stateSelect) {
+          const savedState = localStorage.getItem("selected_delivery_state");
+          if (savedState && stateSelect.querySelector(`option[value="${savedState}"]`)) {
+              stateSelect.value = savedState;
+          }
       }
-    } else {
-      this.container.innerHTML = cart.map(item => this.row(item)).join("");
-      if (this.checkoutBtn) {
-        this.checkoutBtn.disabled = false;
-        this.checkoutBtn.style.opacity = '1';
-        this.checkoutBtn.style.cursor = 'pointer';
+      
+      if (cart.length === 0) {
+          this.container.innerHTML = '<p class="empty-cart" style="text-align: center; padding: 40px;">Your cart is empty</p>';
+          if (this.checkoutBtn) {
+              this.checkoutBtn.disabled = true;
+              this.checkoutBtn.style.opacity = '0.5';
+              this.checkoutBtn.style.cursor = 'not-allowed';
+          }
+      } else {
+          this.container.innerHTML = cart.map(item => this.row(item)).join("");
+          if (this.checkoutBtn) {
+              this.checkoutBtn.disabled = false;
+              this.checkoutBtn.style.opacity = '1';
+              this.checkoutBtn.style.cursor = 'pointer';
+          }
       }
-    }
-    
-    this.updateTotals();
+      
+      // Always update totals (handles both empty and non-empty cart)
+      this.updateTotals();
   }
   
   forceRender() {
@@ -103,44 +103,50 @@ class CartPage {
   }
   
   // UPDATED: Now includes shipping calculation
-  updateTotals() {
-    const cart = window.cartSystem?.cart || [];
-    const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.qty || 1), 0);
-    
-    // Calculate shipping using cartSystem's method if available
-    let shipping = 0;
-    if (window.cartSystem && window.cartSystem.calculateShipping) {
-        shipping = window.cartSystem.calculateShipping(subtotal);
-    }
-    
-    const total = subtotal + shipping;
-    const currentState = localStorage.getItem("selected_delivery_state") || "Lagos";
-    
-    console.log('💰 Cart Totals:', {
-        subtotal: subtotal.toFixed(2),
-        shipping: shipping === 0 ? 'Free' : '$' + shipping.toFixed(2),
-        total: total.toFixed(2),
-        state: currentState
-    });
-    
-    const subtotalEl = document.querySelector("#cart-subtotal");
-    const shippingEl = document.querySelector("#shippingFee");
-    const totalEl = document.querySelector("#cart-total");
-    
-    if (subtotalEl) subtotalEl.textContent = this.formatPrice(subtotal);
-    
-    // Update shipping display
-    if (shippingEl) {
-        if (shipping === 0) {
-            shippingEl.innerHTML = 'Free';
-            shippingEl.style.color = '#28a745';
-        } else {
-            shippingEl.innerHTML = `${this.formatPrice(shipping)} <small style="color: #666; font-size: 11px;">(${currentState})</small>`;
-            shippingEl.style.color = '#333';
-        }
-    }
-    
-    if (totalEl) totalEl.textContent = this.formatPrice(total);
+    updateTotals() {
+      const cart = window.cartSystem?.cart || [];
+      const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.qty || 1), 0);
+      
+      // If cart is empty, shipping should be 0
+      let shipping = 0;
+      if (subtotal > 0 && window.cartSystem && window.cartSystem.calculateShipping) {
+          shipping = window.cartSystem.calculateShipping(subtotal);
+      }
+      
+      const total = subtotal + shipping;
+      const currentState = localStorage.getItem("selected_delivery_state") || "Lagos";
+      
+      console.log('💰 Cart Totals:', {
+          subtotal: subtotal.toFixed(2),
+          shipping: shipping === 0 ? 'Free' : '$' + shipping.toFixed(2),
+          total: total.toFixed(2),
+          state: currentState
+      });
+      
+      const subtotalEl = document.querySelector("#cart-subtotal");
+      const shippingEl = document.querySelector("#shippingFee");
+      const totalEl = document.querySelector("#cart-total");
+      
+      if (subtotalEl) subtotalEl.textContent = this.formatPrice(subtotal);
+      
+      // Update shipping display
+      if (shippingEl) {
+          if (cart.length === 0) {
+              // Cart is empty - show $0.00
+              shippingEl.innerHTML = '$0.00';
+              shippingEl.style.color = '#333';
+          } else if (shipping === 0) {
+              // Free shipping (over $100,000)
+              shippingEl.innerHTML = 'Free';
+              shippingEl.style.color = '#28a745';
+          } else {
+              // Show shipping cost with state
+              shippingEl.innerHTML = `${this.formatPrice(shipping)} <small style="color: #666; font-size: 11px;">(${currentState})</small>`;
+              shippingEl.style.color = '#333';
+          }
+      }
+      
+      if (totalEl) totalEl.textContent = this.formatPrice(total);
   }
   
   formatPrice(price) {
