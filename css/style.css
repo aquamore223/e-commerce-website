@@ -1433,7 +1433,7 @@ color: white;
     }
      .scroll {
        min-width: unset !important;   /* kill old rule */
-       width: calc(40% - 10px) !important;
+       width: calc(50% - 10px) !important;
        flex: 0 0 calc(40% - 10px) !important;
        
     }
@@ -1442,7 +1442,7 @@ color: white;
         width: 100%;
     }
       .scroller {
-        gap: 10px; /* reduce gap */
+        gap: 20px; /* reduce gap */
     }
     .category{
         margin:0;
