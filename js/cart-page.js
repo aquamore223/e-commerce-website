@@ -1,4 +1,4 @@
-// cart-page.js - Cart page with working clear cart
+// cart-page.js - Cart page with working clear cart AND shipping
 
 class CartPage {
   constructor() {
@@ -39,12 +39,22 @@ class CartPage {
     const cart = window.cartSystem?.cart || [];
     console.log('🎨 Rendering cart page, items:', cart.length);
     
+    // Set the saved state in the dropdown
+    const stateSelect = document.getElementById("delivery-state");
+    if (stateSelect) {
+        const savedState = localStorage.getItem("selected_delivery_state");
+        if (savedState && stateSelect.querySelector(`option[value="${savedState}"]`)) {
+            stateSelect.value = savedState;
+        }
+    }
+    
     if (cart.length === 0) {
       this.container.innerHTML = '<p class="empty-cart" style="text-align: center; padding: 40px;">Your cart is empty</p>';
       if (this.checkoutBtn) {
         this.checkoutBtn.disabled = true;
         this.checkoutBtn.style.opacity = '0.5';
         this.checkoutBtn.style.cursor = 'not-allowed';
+        this.updateCartPageTotals(0);
       }
     } else {
       this.container.innerHTML = cart.map(item => this.row(item)).join("");
@@ -68,8 +78,12 @@ class CartPage {
     const subtotal = (item.price || 0) * (item.qty || 1);
     
     let details = '';
-    if (item.color) details += `<span class="item-color" style="display: inline-block; margin-left: 5px; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; font-size: 11px;">${item.color}</span>`;
-    if (item.size) details += `<span class="item-size" style="display: inline-block; margin-left: 5px; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; font-size: 11px;">${item.size}</span>`;
+    if (item.color && item.color !== 'null' && item.color !== 'undefined' && item.color.trim() !== '') {
+        details += `<span class="item-color" style="display: inline-block; margin-left: 5px; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; font-size: 11px;">${item.color}</span>`;
+    }
+    if (item.size && item.size !== 'null' && item.size !== 'undefined' && item.size.trim() !== '') {
+        details += `<span class="item-size" style="display: inline-block; margin-left: 5px; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; font-size: 11px;">${item.size}</span>`;
+    }
     
     return `
       <div class="cart-flex cart-item" data-id="${item.id}" data-color="${item.color || ''}" data-size="${item.size || ''}">
@@ -88,15 +102,45 @@ class CartPage {
     `;
   }
   
+  // UPDATED: Now includes shipping calculation
   updateTotals() {
     const cart = window.cartSystem?.cart || [];
     const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.qty || 1), 0);
     
+    // Calculate shipping using cartSystem's method if available
+    let shipping = 0;
+    if (window.cartSystem && window.cartSystem.calculateShipping) {
+        shipping = window.cartSystem.calculateShipping(subtotal);
+    }
+    
+    const total = subtotal + shipping;
+    const currentState = localStorage.getItem("selected_delivery_state") || "Lagos";
+    
+    console.log('💰 Cart Totals:', {
+        subtotal: subtotal.toFixed(2),
+        shipping: shipping === 0 ? 'Free' : '$' + shipping.toFixed(2),
+        total: total.toFixed(2),
+        state: currentState
+    });
+    
     const subtotalEl = document.querySelector("#cart-subtotal");
+    const shippingEl = document.querySelector("#shippingFee");
     const totalEl = document.querySelector("#cart-total");
     
     if (subtotalEl) subtotalEl.textContent = this.formatPrice(subtotal);
-    if (totalEl) totalEl.textContent = this.formatPrice(subtotal);
+    
+    // Update shipping display
+    if (shippingEl) {
+        if (shipping === 0) {
+            shippingEl.innerHTML = 'Free';
+            shippingEl.style.color = '#28a745';
+        } else {
+            shippingEl.innerHTML = `${this.formatPrice(shipping)} <small style="color: #666; font-size: 11px;">(${currentState})</small>`;
+            shippingEl.style.color = '#333';
+        }
+    }
+    
+    if (totalEl) totalEl.textContent = this.formatPrice(total);
   }
   
   formatPrice(price) {
@@ -125,7 +169,6 @@ class CartPage {
       clearCartBtn = newClearBtn;
       
       clearCartBtn.addEventListener('click', async (e) => {
-
         e.preventDefault();
         e.stopPropagation();
 
@@ -137,7 +180,6 @@ class CartPage {
         // CLOSE MODAL
         const closeModal = () => {
           modal.classList.add("hide");
-
           setTimeout(() => {
             modal.remove();
           }, 300);
@@ -150,20 +192,16 @@ class CartPage {
 
         // CONFIRM CLEAR
         confirmBtn.addEventListener("click", async () => {
-
           if (!window.cartSystem) return;
 
           this.isUpdating = true;
 
           const originalText = confirmBtn.textContent;
-
           confirmBtn.textContent = "Clearing...";
           confirmBtn.disabled = true;
 
           try {
-
             await window.cartSystem.clearCart();
-
             this.forceRender();
 
             if (window.cartSystem.updateCartCount) {
@@ -171,35 +209,27 @@ class CartPage {
             }
 
             const cartCount = document.querySelector(".cart-count");
-
             if (cartCount) {
               cartCount.style.display = "none";
               cartCount.textContent = "0";
             }
 
             this.showNotification('Cart cleared successfully!');
-
             closeModal();
 
           } catch (error) {
-
             console.error('Error clearing cart:', error);
-
             this.showNotification(
               'Failed to clear cart. Please try again.',
               'error'
             );
-
           } finally {
-
             this.isUpdating = false;
-
             confirmBtn.textContent = originalText;
             confirmBtn.disabled = false;
           }
         });
       });
-      
     }
   }
   
@@ -322,32 +352,28 @@ class CartPage {
   }
 
   createClearCartModal() {
+    // Remove existing modal if any
+    const existingModal = document.querySelector(".clear-cart-modal");
+    if (existingModal) existingModal.remove();
 
-  // Remove existing modal if any
-  const existingModal = document.querySelector(".clear-cart-modal");
-  if (existingModal) existingModal.remove();
+    const modal = document.createElement("div");
+    modal.className = "clear-cart-modal";
 
-  const modal = document.createElement("div");
-  modal.className = "clear-cart-modal";
-
-  modal.innerHTML = `
-    <div class="clear-cart-overlay"></div>
-
-    <div class="clear-cart-content">
-      <h3>Clear Cart</h3>
-      <p>Are you sure you want to clear your entire cart?</p>
-
-      <div class="clear-cart-actions">
-        <button class="cancel-clear-cart">Cancel</button>
-        <button class="confirm-clear-cart">Clear Cart</button>
+    modal.innerHTML = `
+      <div class="clear-cart-overlay"></div>
+      <div class="clear-cart-content">
+        <h3>Clear Cart</h3>
+        <p>Are you sure you want to clear your entire cart?</p>
+        <div class="clear-cart-actions">
+          <button class="cancel-clear-cart">Cancel</button>
+          <button class="confirm-clear-cart">Clear Cart</button>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  document.body.appendChild(modal);
-
-  return modal;
-}
+    document.body.appendChild(modal);
+    return modal;
+  }
 }
 
 // Initialize cart page when DOM is ready

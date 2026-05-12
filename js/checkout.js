@@ -101,8 +101,12 @@ window.addEventListener("DOMContentLoaded", async () => {
             </div>
         `;
 
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-        const shipping = 0;
+       const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+        const shipping = window.cartSystem
+            ? window.cartSystem.calculateShipping(subtotal)
+            : 3500;
+
         const total = subtotal + shipping;
 
         checkoutContainer.innerHTML = `
@@ -200,190 +204,207 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 // ==================== ORDER CONFIRMATION MODAL ====================
 
-function showOrderConfirmationModal(orderDetails) {
-    // Remove existing modal if any
-    const existingModal = document.getElementById('order-confirmation-modal');
-    if (existingModal) existingModal.remove();
-    
-    // Format items for display
-    const itemsHtml = orderDetails.items.map(item => `
-        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
-            <div>
-                <strong>${escapeHtml(item.name)}</strong>
-                ${item.color ? `<br><small>Color: ${item.color}</small>` : ''}
-                ${item.size ? `<small>Size: ${item.size}</small>` : ''}
-            </div>
-            <div>
-                x${item.quantity} = ${window.formatPrice ? window.formatPrice(item.price * item.quantity) : '$' + (item.price * item.quantity).toFixed(2)}
-            </div>
-        </div>
-    `).join('');
-    
-    const modalHtml = `
-        <div id="order-confirmation-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; animation: fadeIn 0.3s ease;">
-            <div style="background: white; border-radius: 16px; max-width: 500px; width: 90%; max-height: 85%; overflow: auto; animation: slideIn 0.3s ease;">
-                <!-- Header -->
-                <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 25px; text-align: center; border-radius: 16px 16px 0 0;">
-                    <i class="fas fa-check-circle" style="font-size: 60px; margin-bottom: 10px;"></i>
-                    <h2 style="margin: 0; font-size: 24px;">
-                            ${
-                                orderDetails.paymentMethod === 'cash'
-                                    ? 'Order Placed!'
-                                    : orderDetails.paymentMethod === 'bank'
-                                    ? 'Transfer Submitted!'
-                                    : 'Payment Successful!'
-                            }
-                        </h2>
-
-                        <p style="margin: 5px 0 0; opacity: 0.9;">
-                            ${
-                                orderDetails.paymentMethod === 'cash'
-                                    ? 'Pay when your order arrives'
-                                    : orderDetails.paymentMethod === 'bank'
-                                    ? 'We will verify your transfer shortly'
-                                    : 'Thank you for your purchase'
-                            }
-                        </p>
+    function showOrderConfirmationModal(orderDetails) {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('order-confirmation-modal');
+        if (existingModal) existingModal.remove();
+        
+        // Calculate shipping for the modal
+        let shipping = 0;
+        let shippingDisplay = 'Free';
+        
+        if (orderDetails.shipping !== undefined) {
+            // Use shipping from orderDetails if available
+            shipping = orderDetails.shipping;
+        } else if (window.cartSystem && window.cartSystem.calculateShipping) {
+            // Calculate shipping using cartSystem
+            shipping = window.cartSystem.calculateShipping(orderDetails.subtotal);
+        }
+        
+        if (shipping === 0) {
+            shippingDisplay = '<span style="color: #28a745;">Free</span>';
+        } else {
+            const state = localStorage.getItem("selected_delivery_state") || "Lagos";
+            shippingDisplay = `${window.formatPrice ? window.formatPrice(shipping) : '$' + shipping.toFixed(2)} <small style="color: #666; font-size: 11px;">(${state})</small>`;
+        }
+        
+        // Recalculate total with shipping if total doesn't include shipping
+        const total = orderDetails.total || (orderDetails.subtotal + shipping);
+        
+        // Format items for display
+        const itemsHtml = orderDetails.items.map(item => `
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
+                <div>
+                    <strong>${escapeHtml(item.name)}</strong>
+                    ${item.color ? `<br><small>Color: ${item.color}</small>` : ''}
+                    ${item.size ? `<small>Size: ${item.size}</small>` : ''}
                 </div>
-                
-                <!-- Body -->
-                <div style="padding: 20px;">
-                    <!-- Order ID -->
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
-                        <small style="color: #666;">Order ID</small>
-                        <h3 style="margin: 5px 0 0; color: #333;">#${orderDetails.orderId}</h3>
+                <div>
+                    x${item.quantity} = ${window.formatPrice ? window.formatPrice(item.price * item.quantity) : '$' + (item.price * item.quantity).toFixed(2)}
+                </div>
+            </div>
+        `).join('');
+        
+        // Determine header colors and text based on payment method
+        const isCOD = orderDetails.paymentMethod === 'cash';
+        const isBankTransfer = orderDetails.paymentMethod === 'bank';
+        const paymentConfirmed = orderDetails.paymentConfirmed === true;
+        
+        let headerBg, headerIcon, headerTitle, headerSubtitle;
+        
+        if (isCOD) {
+            headerBg = 'linear-gradient(135deg, #ff9800, #ffb74d)';
+            headerIcon = 'fa-box';
+            headerTitle = 'Order Placed!';
+            headerSubtitle = 'Pay when your order arrives';
+        } else if (isBankTransfer && !paymentConfirmed) {
+            headerBg = 'linear-gradient(135deg, #0066cc, #0099ff)';
+            headerIcon = 'fa-university';
+            headerTitle = 'Transfer Submitted!';
+            headerSubtitle = 'We will verify your transfer shortly';
+        } else {
+            headerBg = 'linear-gradient(135deg, #28a745, #20c997)';
+            headerIcon = 'fa-check-circle';
+            headerTitle = 'Payment Successful!';
+            headerSubtitle = 'Thank you for your purchase';
+        }
+        
+        const modalHtml = `
+            <div id="order-confirmation-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; animation: fadeIn 0.3s ease;">
+                <div style="background: white; border-radius: 16px; max-width: 500px; width: 90%; max-height: 85%; overflow: auto; animation: slideIn 0.3s ease;">
+                    <!-- Header -->
+                    <div style="background: ${headerBg}; color: white; padding: 25px; text-align: center; border-radius: 16px 16px 0 0;">
+                        <i class="fas ${headerIcon}" style="font-size: 60px; margin-bottom: 10px;"></i>
+                        <h2 style="margin: 0; font-size: 24px;">${headerTitle}</h2>
+                        <p style="margin: 5px 0 0; opacity: 0.9;">${headerSubtitle}</p>
                     </div>
                     
-                    <!-- Order Items -->
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px; color: #333;">Order Items</h4>
-                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 0 10px;">
-                            ${itemsHtml}
+                    <!-- Body -->
+                    <div style="padding: 20px;">
+                        <!-- Order ID -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                            <small style="color: #666;">Order ID</small>
+                            <h3 style="margin: 5px 0 0; color: #333;">#${orderDetails.orderId}</h3>
                         </div>
-                    </div>
-                    
-                    <!-- Total -->
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span>Subtotal:</span>
-                            <span>${window.formatPrice ? window.formatPrice(orderDetails.subtotal) : '$' + orderDetails.subtotal.toFixed(2)}</span>
+                        
+                        <!-- Order Items -->
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px; color: #333;">Order Items</h4>
+                            <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 0 10px;">
+                                ${itemsHtml}
+                            </div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span>Shipping:</span>
-                            <span>Free</span>
+                        
+                        <!-- Total -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Subtotal:</span>
+                                <span>${window.formatPrice ? window.formatPrice(orderDetails.subtotal) : '$' + orderDetails.subtotal.toFixed(2)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Shipping:</span>
+                                <span>${shippingDisplay}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; border-top: 2px solid #ddd; padding-top: 10px; margin-top: 5px;">
+                                <span>Total:</span>
+                                <span style="color: #28a745;">${window.formatPrice ? window.formatPrice(total) : '$' + total.toFixed(2)}</span>
+                            </div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; border-top: 2px solid #ddd; padding-top: 10px; margin-top: 5px;">
-                            <span>Total:</span>
-                            <span style="color: #28a745;">${window.formatPrice ? window.formatPrice(orderDetails.total) : '$' + orderDetails.total.toFixed(2)}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Delivery Info -->
-                    <div style="background: #e7f3ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px; color: #0066cc;">Delivery Information</h4>
-                        <div style="font-size: 14px;">
-                            <div><strong>${escapeHtml(orderDetails.customerInfo.name)}</strong></div>
-                            <div>${orderDetails.customerInfo.phone}</div>
-                            <div>${orderDetails.customerInfo.address}</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Payment Info -->
-                    <div style="background: ${orderDetails.paymentMethod === 'cash' ? '#fff3cd' : '#d4edda'}; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px; color: ${orderDetails.paymentMethod === 'cash' ? '#856404' : '#155724'};">Payment Information</h4>
-                        <div><strong>Method:</strong> ${orderDetails.paymentMethod === 'cash' ? 'Cash on Delivery' : 
-                                    orderDetails.paymentMethod === 'bank' ? 'Bank Transfer' : 
-                                    orderDetails.paymentMethod}</div>
-                        <div>
-                            <strong>Status:</strong> 
-                            <span style="
-                                color: ${
-                                    orderDetails.paymentMethod === 'cash'
-                                        ? '#ff9800'
-                                        : orderDetails.paymentMethod === 'bank'
-                                        ? '#ff9800'
-                                        : '#28a745'
-                                };
-                            ">
-                                ${
-                                    orderDetails.paymentMethod === 'cash'
-                                        ? 'Pay on Delivery'
-                                        : orderDetails.paymentMethod === 'bank'
-                                        ? 'Awaiting Transfer Confirmation'
-                                        : 'Paid Successfully'
-                                }
-                            </span>
-                        </div>
-
-                        <small style="
-                            color: ${
-                                orderDetails.paymentMethod === 'cash'
-                                    ? '#856404'
-                                    : orderDetails.paymentMethod === 'bank'
-                                    ? '#856404'
-                                    : '#155724'
-                            };
-                        ">
-                            ${
-                                orderDetails.paymentMethod === 'cash'
-                                    ? 'Customer will pay when order arrives'
-                                    : orderDetails.paymentMethod === 'bank'
-                                    ? 'Waiting for customer transfer confirmation'
-                                    : 'Payment completed successfully'
-                            }
-                        </small>
-                    </div>
-                    
-                    <!-- Bank Transfer Details (if applicable) -->
-                    ${orderDetails.bankDetails ? `
+                        
+                        <!-- Delivery Info -->
                         <div style="background: #e7f3ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                            <h4 style="margin: 0 0 10px; color: #0066cc;">Bank Transfer Details</h4>
-                            <div><strong>Bank:</strong> ${orderDetails.bankDetails.bankName}</div>
-                            <div><strong>Account Name:</strong> ${orderDetails.bankDetails.accountName}</div>
-                            <div><strong>Account Number:</strong> ${orderDetails.bankDetails.accountNumber}</div>
-                            <div><strong>Reference:</strong> ${orderDetails.bankDetails.reference}</div>
-                            <div><strong>Amount:</strong> ${window.formatPrice ? window.formatPrice(orderDetails.bankDetails.amount) : '$' + orderDetails.bankDetails.amount}</div>
-                            <small>Please use the reference number when making payment</small>
+                            <h4 style="margin: 0 0 10px; color: #0066cc;">Delivery Information</h4>
+                            <div style="font-size: 14px;">
+                                <div><strong>${escapeHtml(orderDetails.customerInfo.name)}</strong></div>
+                                <div>${orderDetails.customerInfo.phone}</div>
+                                <div>${orderDetails.customerInfo.address}</div>
+                            </div>
                         </div>
-                    ` : ''}
-                </div>
-                
-                <!-- Footer -->
-                <div style="padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px;">
-                    <button onclick="closeOrderConfirmationModal()" class="colored-btn" style="flex: 1; background: #6c757d;">
-                        <i class="fas fa-times"></i> Close
-                    </button>
-                    <button onclick="window.location.href='/order&payment/order-tracking.html?orderId=${orderDetails.orderId}'" class="colored-btn" style="flex: 1;">
-                        <i class="fas fa-truck"></i> Track Order
-                    </button>
+                        
+                        <!-- Payment Info -->
+                        <div style="background: ${isCOD ? '#fff3cd' : isBankTransfer && !paymentConfirmed ? '#cce5ff' : '#d4edda'}; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px; color: ${isCOD ? '#856404' : isBankTransfer && !paymentConfirmed ? '#004085' : '#155724'};">
+                                <i class="fas ${isCOD ? 'fa-money-bill-wave' : isBankTransfer ? 'fa-university' : 'fa-credit-card'}"></i> 
+                                Payment Information
+                            </h4>
+                            <div><strong>Method:</strong> ${isCOD ? 'Cash on Delivery' : isBankTransfer ? 'Bank Transfer' : orderDetails.paymentMethod}</div>
+                            <div>
+                                <strong>Status:</strong> 
+                                <span style="
+                                    font-weight: bold;
+                                    color: ${isCOD ? '#ff9800' : isBankTransfer && !paymentConfirmed ? '#ff9800' : '#28a745'};
+                                ">
+                                    ${isCOD ? '⏳ Pay on Delivery' : isBankTransfer && !paymentConfirmed ? '⏳ Awaiting Transfer Confirmation' : '✅ Paid Successfully'}
+                                </span>
+                            </div>
+                            <small style="
+                                color: ${isCOD ? '#856404' : isBankTransfer && !paymentConfirmed ? '#004085' : '#155724'};
+                                display: block;
+                                margin-top: 8px;
+                            ">
+                                ${isCOD ? '💵 Please keep exact change ready for delivery' : isBankTransfer && !paymentConfirmed ? '🏦 Your order will be processed once payment is confirmed' : '✅ Payment completed successfully'}
+                            </small>
+                        </div>
+                        
+                        <!-- Bank Transfer Details (if applicable) -->
+                        ${orderDetails.bankDetails ? `
+                            <div style="background: #e7f3ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0066cc;">
+                                <h4 style="margin: 0 0 10px; color: #0066cc;">🏦 Bank Transfer Details</h4>
+                                <div style="margin-bottom: 8px;"><strong>Bank:</strong> ${orderDetails.bankDetails.bankName}</div>
+                                <div style="margin-bottom: 8px;"><strong>Account Name:</strong> ${orderDetails.bankDetails.accountName}</div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Account Number:</strong> 
+                                    <span style="font-size: 18px; font-weight: bold; color: #0066cc; user-select: all;">${orderDetails.bankDetails.accountNumber}</span>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Reference:</strong> 
+                                    <span style="font-family: monospace; background: #fff; padding: 2px 8px; border-radius: 4px; user-select: all;">${orderDetails.bankDetails.reference}</span>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Amount:</strong> 
+                                    <span style="color: #28a745; font-weight: bold;">${window.formatPrice ? window.formatPrice(orderDetails.bankDetails.amount) : '$' + orderDetails.bankDetails.amount.toFixed(2)}</span>
+                                </div>
+                                <small style="color: #0066cc;">⚠️ Please use the reference number when making payment</small>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div style="padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                        <button onclick="closeOrderConfirmationModal()" class="colored-btn" style="flex: 1; background: #6c757d;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                        <button onclick="window.location.href='/order&payment/order-tracking.html?orderId=${orderDetails.orderId}'" class="colored-btn" style="flex: 1;">
+                            <i class="fas fa-truck"></i> Track Order
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    // Add animation styles if not present
-    if (!document.getElementById('modal-animation-styles')) {
-        const styles = document.createElement('style');
-        styles.id = 'modal-animation-styles';
-        styles.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            @keyframes fadeOut {
-                from { opacity: 1; }
-                to { opacity: 0; }
-            }
-            @keyframes slideIn {
-                from { transform: translateY(-50px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
         `;
-        document.head.appendChild(styles);
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Add animation styles if not present
+        if (!document.getElementById('modal-animation-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'modal-animation-styles';
+            styles.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes fadeOut {
+                    from { opacity: 1; }
+                    to { opacity: 0; }
+                }
+                @keyframes slideIn {
+                    from { transform: translateY(-50px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
     }
-}
 
 function closeOrderConfirmationModal() {
     const modal = document.getElementById('order-confirmation-modal');
@@ -582,8 +603,6 @@ function confirmBankTransferPayment() {
 }
 
 window.confirmBankTransferPayment = confirmBankTransferPayment;
-// ==================== HANDLE PLACE ORDER ====================
-
 // Handle place order button click
 document.addEventListener('click', async (e) => {
     if (e.target.id === 'place-order-btn') {
@@ -628,7 +647,13 @@ document.addEventListener('click', async (e) => {
         
         try {
             const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-            const total = subtotal;
+            
+            // Calculate shipping
+            const shipping = window.cartSystem 
+                ? window.cartSystem.calculateShipping(subtotal) 
+                : 3500;
+            
+            const total = subtotal + shipping; // Include shipping in total
             
             // Collect customer info
             const customerInfo = await window.paymentProcessor.collectCustomerInfo();
@@ -651,8 +676,9 @@ document.addEventListener('click', async (e) => {
                     size: item.size || null,
                     img: item.img
                 })),
-                total: total,
+                total: total, // Use total with shipping
                 subtotal: subtotal,
+                shipping: shipping, // Include shipping in order data
                 paymentMethod: selectedPayment.value === 'cash' ? 'cash_on_delivery' : 
                               selectedPayment.value === 'bank' ? 'bank_transfer' : 
                               selectedPayment.value,
@@ -667,7 +693,8 @@ document.addEventListener('click', async (e) => {
             console.log('Processing order:', orderData);
             
             // Save billing details if checkbox checked
-                await saveBillingDetails();
+            await saveBillingDetails();
+            
             // Process payment
             const result = await window.paymentProcessor.processPayment(orderData, selectedPayment.value);
             
@@ -684,19 +711,17 @@ document.addEventListener('click', async (e) => {
                     orderId: result.orderId,
                     items: orderData.items,
                     subtotal: subtotal,
-                    total: total,
+                    shipping: shipping, // Add shipping to orderDetails
+                    total: total, // Use total with shipping
                     paymentMethod: selectedPayment.value,
                     customerInfo: customerInfo,
                     bankDetails: result.bankDetails || null
                 };
                 
-              // BANK TRANSFER FLOW
+                // BANK TRANSFER FLOW
                 if (selectedPayment.value === 'bank') {
-
                     showBankTransferModal(orderDetails);
-
                 } else {
-
                     showOrderConfirmationModal(orderDetails);
                 }
                 

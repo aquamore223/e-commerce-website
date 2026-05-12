@@ -267,6 +267,8 @@ class CartSystem {
           btn.disabled = false;
         }, 1000);
       }
+
+      
     });
     
     // QUANTITY CHANGE
@@ -307,6 +309,24 @@ class CartSystem {
         await this.saveCart();
         this.renderCheckout();
       }
+    });
+
+        // In setupEventListeners method, update the delivery-state listener:
+    document.addEventListener("change", (e) => {
+        if (e.target.id === "delivery-state") {
+            // Save selected state to localStorage
+            const selectedState = e.target.value;
+            localStorage.setItem("selected_delivery_state", selectedState);
+            console.log('📍 Delivery state saved:', selectedState);
+            
+            // Update the preview if it exists
+            this.renderCheckout();
+            
+            // Also trigger cart page update if cart-page.js exists
+            if (window.cartPage && window.cartPage.updateTotals) {
+                window.cartPage.updateTotals();
+            }
+        }
     });
   }
   
@@ -437,6 +457,47 @@ class CartSystem {
     }
     return '/images/placeholder.jpg';
   }
+
+      calculateShipping(subtotal) {
+      // Get selected state - try multiple methods
+      let state = "Lagos"; // Default
+      
+      // Method 1: From the cart page select
+      const stateSelect = document.getElementById("delivery-state");
+      if (stateSelect && stateSelect.value) {
+          state = stateSelect.value.trim();
+      }
+      
+      // Method 2: From localStorage (save state when selected)
+      const savedState = localStorage.getItem("selected_delivery_state");
+      if (savedState) {
+          state = savedState;
+      }
+      
+      // Method 3: If stateSelect exists but no saved state, use its value
+      if (stateSelect && stateSelect.value) {
+          state = stateSelect.value.trim();
+          // Save to localStorage for use in preview
+          localStorage.setItem("selected_delivery_state", state);
+      }
+      
+      // Free shipping for orders over $100,000
+      if (subtotal >= 100000) {
+          return 0;
+      }
+
+      const shippingRates = {
+          Lagos: 20,
+          Abuja: 40,
+          Ibadan: 30,
+          Kano: 50,
+          PortHarcourt: 45,
+          benin: 75,
+      };
+
+      // Ensure number is returned
+      return Number(shippingRates[state] || 3500);
+  }
   
   async saveCart() {
     console.log('💾 Saving cart, items:', this.cart.length);
@@ -503,18 +564,27 @@ class CartSystem {
       `;
     }).join("");
     
+    const shipping = Number(this.calculateShipping(subtotal));
+    const total = subtotal + shipping;
+
     container.innerHTML += `
       <div class="undl-fl">
         <p>Subtotal:</p>
         <p>$${subtotal.toFixed(2)}</p>
       </div>
+
       <div class="undl-fl">
         <p>Shipping:</p>
-        <p>Free</p>
+        <p>
+          ${shipping === 0 
+            ? 'Free' 
+            : '$' + shipping.toFixed(2)}
+        </p>
       </div>
+
       <div class="pg-flex-sb">
         <p>Total:</p>
-        <p>$${subtotal.toFixed(2)}</p>
+        <p>$${total.toFixed(2)}</p>
       </div>
     `;
   }

@@ -1956,6 +1956,73 @@ form p a {
 }
 
 
+/* ==================== DELIVERY STATE SELECT ==================== */
+
+#delivery-state {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    /* Size */
+    padding: 12px 40px 12px 16px;
+    min-width: 200px;
+    font-size: 14px;
+    font-family: inherit;
+    
+    /* Colors */
+    background-color: #ffffff;
+    color: #333333;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    
+    /* Cursor */
+    cursor: pointer;
+    
+    /* Transition */
+    transition: all 0.3s ease;
+    
+    /* Custom arrow */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    
+    /* Box shadow */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Hover state */
+#delivery-state:hover {
+    border-color: #0066cc;
+    box-shadow: 0 4px 8px rgba(0, 102, 204, 0.1);
+}
+
+/* Focus state */
+#delivery-state:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.15);
+}
+
+/* Option styles */
+#delivery-state option {
+    padding: 12px;
+    background-color: #ffffff;
+    color: #333333;
+    font-size: 14px;
+}
+
+/* Option hover state */
+#delivery-state option:hover {
+    background-color: #f0f7ff;
+}
+
+/* Option selected state */
+#delivery-state option:checked {
+    background-color: #0066cc;
+    color: #ffffff;
+}
+
 
     @media (max-width: 720px) {
         .cart-main{
