@@ -1433,8 +1433,8 @@ color: white;
     }
      .scroll {
        min-width: unset !important;   /* kill old rule */
-       width: calc(50% - 10px) !important;
-       flex: 0 0 calc(50% - 10px) !important;
+       width: calc(40% - 10px) !important;
+       flex: 0 0 calc(40% - 10px) !important;
        
     }
 
